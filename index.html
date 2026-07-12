@@ -1,20 +1,3 @@
-
-
-Skip to content
-Using Gmail with screen readers
-Enable desktop notifications for Gmail.
-   OK  No thanks
-1 of 165
-(no subject)
-Inbox
-
-Abderrahim Kadri
-Attachments
-1:06 PM (11 minutes ago)
-to me
-
- One attachment
-  •  Scanned by Gmail
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -691,6 +674,27 @@ to me
   .barcode-label .lbl-name{ font-size:12px; font-weight:700; margin-bottom:2px; text-align:center; }
   .barcode-label .lbl-price{ font-size:11px; margin-top:2px; }
 
+  /* فاتورة A5 */
+  .invoice-sheet{
+    width:148mm;
+    min-height:210mm;
+    margin:0 auto;
+    padding:12mm 10mm;
+    font-family:'Cairo', sans-serif;
+    color:#1a1a1a;
+    direction:rtl;
+  }
+  .invoice-head{ text-align:center; margin-bottom:14px; }
+  .invoice-head img{ width:60px; height:60px; border-radius:50%; margin-bottom:6px; }
+  .invoice-head h2{ font-family:'Fraunces', serif; font-size:18px; margin:4px 0 0; }
+  .invoice-head .sub{ font-size:11px; color:#555; margin-top:2px; }
+  .invoice-meta{ display:flex; justify-content:space-between; font-size:11px; color:#333; margin:14px 0 10px; border-top:1px solid #999; border-bottom:1px solid #999; padding:6px 0; }
+  .invoice-table{ width:100%; border-collapse:collapse; font-size:12px; }
+  .invoice-table th, .invoice-table td{ border-bottom:1px solid #ddd; padding:6px 4px; text-align:right; }
+  .invoice-table th{ font-weight:700; border-bottom:2px solid #333; }
+  .invoice-total{ display:flex; justify-content:space-between; font-size:15px; font-weight:800; margin-top:14px; padding-top:10px; border-top:2px solid #333; }
+  .invoice-footer{ text-align:center; font-size:10.5px; color:#777; margin-top:24px; }
+
   @media print{
     body *{ visibility:hidden; }
     .print-area, .print-area *{ visibility:visible; }
@@ -698,6 +702,11 @@ to me
       display:grid;
       grid-template-columns:repeat(2, 1fr);
       gap:10px;
+      position:absolute;
+      top:0; left:0; width:100%;
+    }
+    .print-area.invoice-mode{
+      display:block;
       position:absolute;
       top:0; left:0; width:100%;
     }
@@ -726,10 +735,21 @@ to me
 
   <div class="page">
     <div id="sync-status" style="text-align:center; font-size:11px; color:var(--ink-soft); margin:10px 0 4px;"></div>
-    <div style="display:flex; gap:8px; margin-bottom:14px;">
+    <div style="display:flex; gap:8px; margin-bottom:8px;">
       <button class="mini-btn" id="export-btn" style="flex:1;" data-i18n="btn_export">⬇️ تصدير البيانات</button>
       <button class="mini-btn" id="import-btn" style="flex:1;" data-i18n="btn_import">⬆️ استيراد البيانات</button>
       <input type="file" id="import-file" accept="application/json" style="display:none;">
+    </div>
+    <div style="display:flex; gap:8px; margin-bottom:14px;">
+      <button class="mini-btn" id="export-text-btn" style="flex:1;">📋 نسخ كنص (يعمل داخل Claude)</button>
+      <button class="mini-btn" id="import-text-btn" style="flex:1;">📝 لصق نص للاستيراد</button>
+    </div>
+    <div id="text-transfer-box" style="display:none; margin-bottom:14px;">
+      <textarea id="text-transfer-area" style="width:100%; min-height:140px; font-family:'Space Mono', monospace; font-size:11px; padding:10px; border-radius:8px; border:1px solid var(--line); direction:ltr;" placeholder="الصق نص النسخة الاحتياطية هنا..."></textarea>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="mini-btn sage" id="text-transfer-confirm" style="flex:1;">✓ استيراد من النص الملصق</button>
+        <button class="mini-btn" id="text-transfer-close" style="flex:1;">إغلاق</button>
+      </div>
     </div>
 
 
@@ -925,6 +945,10 @@ to me
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding-top:12px; border-top:1px dashed var(--line);">
           <span style="font-family:'Fraunces', serif; font-weight:700; font-size:15px;" data-i18n="sl_cart_total">المجموع الكلي</span>
           <span id="sl-cart-total" style="font-family:'Space Mono', monospace; font-weight:700; font-size:20px; color:var(--sage);">0 دج</span>
+        </div>
+        <div class="toggle-row" style="margin-top:10px;">
+          <input type="checkbox" id="sl-cart-print-toggle" checked>
+          <label for="sl-cart-print-toggle" style="margin:0;color:inherit;">🖨️ طباعة فاتورة A5 عند إتمام البيع</label>
         </div>
         <div style="display:flex; gap:8px; margin-top:14px;">
           <button class="mini-btn" id="sl-cart-clear" style="flex:1;" data-i18n="sl_cart_clear">إفراغ السلة</button>
@@ -1408,6 +1432,7 @@ to me
       return;
     }
     const printArea = document.getElementById('print-area');
+    printArea.className = 'print-area';
     printArea.innerHTML = '';
     items.forEach(it => {
       if(!it.barcode) it.barcode = generateBarcode();
@@ -2077,6 +2102,11 @@ to me
           <div class="ledger-name">${escapeHtml(line.name)}</div>
           <div class="ledger-meta">${fmt(line.unitPrice)} دج × ${line.qty} = ${fmt(line.unitPrice*line.qty)} دج</div>
         </div>
+        <div class="qty-control">
+          <button class="qty-btn" data-action="cart-dec" data-id="${line.id}">−</button>
+          <span class="qty-val">${line.qty}</span>
+          <button class="qty-btn" data-action="cart-inc" data-id="${line.id}">+</button>
+        </div>
         <button class="ev-del" data-action="remove-cart" data-id="${line.id}" aria-label="حذف">×</button>
       `;
       cartListEl.appendChild(row);
@@ -2087,9 +2117,29 @@ to me
   }
 
   cartListEl.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-action="remove-cart"]'); if(!btn) return;
-    cart = cart.filter(l => l.id !== btn.dataset.id);
-    renderCart();
+    const removeBtn = e.target.closest('[data-action="remove-cart"]');
+    if(removeBtn){
+      cart = cart.filter(l => l.id !== removeBtn.dataset.id);
+      renderCart();
+      return;
+    }
+    const incBtn = e.target.closest('[data-action="cart-inc"]');
+    if(incBtn){
+      const line = cart.find(l => l.id === incBtn.dataset.id);
+      if(line) line.qty += 1;
+      renderCart();
+      return;
+    }
+    const decBtn = e.target.closest('[data-action="cart-dec"]');
+    if(decBtn){
+      const line = cart.find(l => l.id === decBtn.dataset.id);
+      if(line){
+        line.qty -= 1;
+        if(line.qty <= 0) cart = cart.filter(l => l.id !== decBtn.dataset.id);
+      }
+      renderCart();
+      return;
+    }
   });
 
   cartClearBtn.addEventListener('click', () => {
@@ -2099,10 +2149,52 @@ to me
     renderCart();
   });
 
+  function printInvoice(items, total, groupId, dateISO){
+    const printArea = document.getElementById('print-area');
+    printArea.className = 'print-area invoice-mode';
+    const logoSrc = document.querySelector('.cover-logo') ? document.querySelector('.cover-logo').src : '';
+    const dt = new Date(dateISO);
+    const dateStr = dt.toLocaleDateString('ar-DZ');
+    const timeStr = dt.toLocaleTimeString('ar-DZ', { hour:'2-digit', minute:'2-digit' });
+
+    const rowsHtml = items.map(l => `
+      <tr>
+        <td>${escapeHtml(l.name)}</td>
+        <td style="text-align:center;">${l.qty}</td>
+        <td style="text-align:center;">${fmt(l.unitPrice)}</td>
+        <td style="text-align:left;">${fmt(l.unitPrice*l.qty)}</td>
+      </tr>
+    `).join('');
+
+    printArea.innerHTML = `
+      <div class="invoice-sheet">
+        <div class="invoice-head">
+          ${logoSrc ? `<img src="${logoSrc}" alt="logo">` : ''}
+          <h2>La Plume Blanche</h2>
+          <div class="sub">وصل بيع</div>
+        </div>
+        <div class="invoice-meta">
+          <span>رقم العملية: ${groupId.slice(-8)}</span>
+          <span>${dateStr} · ${timeStr}</span>
+        </div>
+        <table class="invoice-table">
+          <thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>المجموع</th></tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+        <div class="invoice-total"><span>المجموع الكلي</span><span>${fmt(total)} دج</span></div>
+        <div class="invoice-footer">شكرًا لتعاملكم معنا — La Plume Blanche</div>
+      </div>
+    `;
+    setTimeout(() => window.print(), 150);
+  }
+
   cartCompleteBtn.addEventListener('click', async () => {
     if(cart.length === 0) return;
     const groupId = uid();
     const now = new Date().toISOString();
+    const shouldPrint = document.getElementById('sl-cart-print-toggle').checked;
+    const cartSnapshot = cart.map(l => ({ ...l }));
+    const total = cartSnapshot.reduce((s,l) => s + l.unitPrice*l.qty, 0);
 
     cart.forEach(line => {
       const profit = line.costPrice !== null ? (line.unitPrice - line.costPrice) * line.qty : 0;
@@ -2125,6 +2217,8 @@ to me
     cart = [];
     renderCart();
     renderSales();
+
+    if(shouldPrint) printInvoice(cartSnapshot, total, groupId, now);
   });
 
   sl.add.addEventListener('click', () => {
@@ -2349,8 +2443,8 @@ to me
   /* =========================================================
      تصدير / استيراد البيانات
   ========================================================= */
-  document.getElementById('export-btn').addEventListener('click', () => {
-    const backup = {
+  function buildBackupObject(){
+    return {
       exportedAt: new Date().toISOString(),
       stock: state.stock,
       sales: state.sales,
@@ -2358,7 +2452,76 @@ to me
       orders: state.orders,
       flexy: state.flexy,
     };
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  }
+
+  function mergeArraysById(current, imported){
+    const map = new Map();
+    (current || []).forEach(x => map.set(x.id, x));
+    (imported || []).forEach(x => { if(!map.has(x.id)) map.set(x.id, x); });
+    return Array.from(map.values());
+  }
+
+  function mergeFlexy(currentList, importedList){
+    const result = (currentList || []).map(op => ({ ...op }));
+    (importedList || []).forEach(impOp => {
+      const idx = result.findIndex(op => op.id === impOp.id);
+      if(idx === -1){ result.push(impOp); return; }
+      const curr = result[idx];
+      const histA = curr.history || [];
+      const histB = impOp.history || [];
+      const seen = new Set();
+      const merged = [];
+      [...histA, ...histB].forEach(h => {
+        const key = h.date + '|' + h.type + '|' + h.amount + '|' + (h.cost||0);
+        if(!seen.has(key)){ seen.add(key); merged.push(h); }
+      });
+      merged.sort((a,b) => new Date(a.date) - new Date(b.date));
+      const totalFace = merged.filter(h => h.type === 'refill').reduce((s,h) => s + h.amount, 0);
+      const totalCost = merged.filter(h => h.type === 'refill').reduce((s,h) => s + (h.cost||0), 0);
+      const totalSold = merged.filter(h => h.type === 'sale').reduce((s,h) => s + h.amount, 0);
+      result[idx] = { ...curr, history: merged, totalFace, totalCost, totalSold, balance: totalFace - totalSold };
+    });
+    return result;
+  }
+
+  async function applyImportedData(data){
+    const wantMerge = confirm(
+      'كيف تريد استيراد هذه البيانات؟\n\n' +
+      'OK = دمج مع البيانات الحالية (يضيف كل ما هو جديد، يحافظ على كل شيء موجود عندك الآن — الأكثر أمانًا)\n\n' +
+      'Cancel = إذا تريد الاستبدال الكامل بدل الدمج (سيُسأل عن هذا بعدها)'
+    );
+
+    if(wantMerge){
+      state.stock = mergeArraysById(state.stock, data.stock);
+      state.sales = mergeArraysById(state.sales, data.sales);
+      state.customers = mergeArraysById(state.customers, data.customers);
+      state.orders = mergeArraysById(state.orders, data.orders);
+      state.flexy = mergeFlexy(state.flexy, data.flexy);
+      ensureFlexyDefaults();
+    } else {
+      const wantReplace = confirm('هل تريد استبدال كل البيانات الحالية بالكامل بمحتوى هذا النص/الملف؟ (سيُحذف كل ما هو غير موجود فيه — لا يمكن التراجع)');
+      if(!wantReplace) return false;
+
+      state.stock = Array.isArray(data.stock) ? data.stock : [];
+      state.sales = Array.isArray(data.sales) ? data.sales : [];
+      state.customers = Array.isArray(data.customers) ? data.customers : [];
+      state.orders = Array.isArray(data.orders) ? data.orders : [];
+      state.flexy = Array.isArray(data.flexy) ? data.flexy : [];
+      ensureFlexyDefaults();
+    }
+
+    await saveKey(KEYS.stock, state.stock);
+    await saveKey(KEYS.sales, state.sales);
+    await saveKey(KEYS.customers, state.customers);
+    await saveKey(KEYS.orders, state.orders);
+    await saveKey(KEYS.flexy, state.flexy);
+
+    renderAllPanels();
+    return true;
+  }
+
+  document.getElementById('export-btn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(buildBackupObject(), null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -2379,24 +2542,8 @@ to me
     reader.onload = async (ev) => {
       try{
         const data = JSON.parse(ev.target.result);
-        const confirmMsg = 'استيراد هذا الملف سيستبدل كل البيانات الحالية (المخزون، المبيعات، الزبائن، الطلبات، الفليكسي) بما هو موجود في الملف. هل تريد المتابعة؟';
-        if(!confirm(confirmMsg)) return;
-
-        state.stock = Array.isArray(data.stock) ? data.stock : [];
-        state.sales = Array.isArray(data.sales) ? data.sales : [];
-        state.customers = Array.isArray(data.customers) ? data.customers : [];
-        state.orders = Array.isArray(data.orders) ? data.orders : [];
-        state.flexy = Array.isArray(data.flexy) ? data.flexy : [];
-        ensureFlexyDefaults();
-
-        await saveKey(KEYS.stock, state.stock);
-        await saveKey(KEYS.sales, state.sales);
-        await saveKey(KEYS.customers, state.customers);
-        await saveKey(KEYS.orders, state.orders);
-        await saveKey(KEYS.flexy, state.flexy);
-
-        renderStock(); renderSales(); renderFlexy(); renderCustomers(); renderOrders();
-        alert('تم استيراد البيانات بنجاح.');
+        const ok = await applyImportedData(data);
+        if(ok) alert('تم استيراد البيانات بنجاح.');
       }catch(err){
         console.error('Import failed', err);
         alert('تعذّر قراءة الملف — تأكد أنه ملف نسخة احتياطية صحيح (JSON) من نفس الأداة.');
@@ -2404,6 +2551,50 @@ to me
       importFileInput.value = '';
     };
     reader.readAsText(file);
+  });
+
+  /* نسخ/لصق كنص — بديل يعمل حتى في البيئات التي تمنع تحميل الملفات (مثل معاينة Claude) */
+  const textBox = document.getElementById('text-transfer-box');
+  const textArea = document.getElementById('text-transfer-area');
+
+  document.getElementById('export-text-btn').addEventListener('click', () => {
+    textArea.value = JSON.stringify(buildBackupObject(), null, 2);
+    textArea.removeAttribute('readonly');
+    textBox.style.display = 'block';
+    textArea.focus();
+    textArea.select();
+    try{
+      document.execCommand('copy');
+      alert('تم نسخ البيانات كنص. الصقها الآن في أي مكان تحب (ملاحظات، بريد إلكتروني)، أو مباشرة في خانة "لصق نص للاستيراد" في الأداة على جهاز آخر.');
+    }catch(e){
+      alert('النص ظاهر أمامك — حدد الكل (اضغط مطولاً ثم "تحديد الكل") وانسخه يدويًا.');
+    }
+  });
+
+  document.getElementById('import-text-btn').addEventListener('click', () => {
+    textArea.value = '';
+    textArea.removeAttribute('readonly');
+    textArea.placeholder = 'الصق نص النسخة الاحتياطية هنا...';
+    textBox.style.display = 'block';
+    textArea.focus();
+  });
+
+  document.getElementById('text-transfer-close').addEventListener('click', () => {
+    textBox.style.display = 'none';
+  });
+
+  document.getElementById('text-transfer-confirm').addEventListener('click', async () => {
+    try{
+      const data = JSON.parse(textArea.value);
+      const ok = await applyImportedData(data);
+      if(ok){
+        alert('تم استيراد البيانات بنجاح.');
+        textBox.style.display = 'none';
+      }
+    }catch(err){
+      console.error('Text import failed', err);
+      alert('تعذّر قراءة النص — تأكد أنك لصقت نص نسخة احتياطية صحيح وكامل (JSON) من نفس الأداة.');
+    }
   });
 
   /* تسجيل Service Worker لدعم التثبيت كتطبيق (PWA) — يعمل فقط عند التشغيل من رابط حقيقي (https)،
@@ -2452,5 +2643,3 @@ to me
 
 </body>
 </html>
-plume-blanche-management.html
-Displaying plume-blanche-management.html.
