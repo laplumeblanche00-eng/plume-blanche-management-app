@@ -239,6 +239,30 @@
   }
   .filter-bar input[type="text"]{ flex:2; }
   .filter-bar select{ flex:1; }
+  .demo-group{
+    display:flex;
+    gap:6px;
+    align-items:center;
+    flex-wrap:wrap;
+    margin-bottom:8px;
+  }
+  .demo-label{ font-size:11px; color:var(--ink-soft); min-width:70px; }
+  .demo-btn{
+    font-family:'Cairo', sans-serif;
+    font-size:11.5px;
+    padding:5px 11px;
+    border-radius:20px;
+    border:1px solid var(--line);
+    background:#fffdf7;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .demo-btn.selected{
+    background:var(--ink-accent);
+    color:var(--accent-on-dark);
+    border-color:var(--ink-accent);
+  }
+
   .toggle-row{
     display:flex;
     align-items:center;
@@ -896,6 +920,15 @@
       </div>
 
       <div class="card">
+        <p class="card-title"><span class="quill">👥</span> جمهور المحل</p>
+        <p style="font-size:11px; color:var(--ink-soft); margin:-8px 0 12px;">إحصائيات مبنية على البيانات الاختيارية التي تسجلها مع البيع، الطلبات، والزبائن.</p>
+        <div id="sl-audience-gender" class="breakdown-row"></div>
+        <div id="sl-audience-age" class="breakdown-row" style="margin-top:14px;"></div>
+        <div id="sl-audience-type" class="breakdown-row" style="margin-top:14px;"></div>
+        <div class="trend-empty" id="sl-audience-empty">لم تُسجَّل بيانات كافية بعد — استعمل أزرار الجنس/العمر/نوع الزبون عند البيع.</div>
+      </div>
+
+      <div class="card">
         <p class="card-title"><span class="quill">✒</span> <span data-i18n="sl_add_title">إضافة صنف للسلة</span></p>
         <div class="form-grid">
           <button type="button" class="mini-btn full" id="sl-scan-btn" style="margin-bottom:4px; width:100%;" data-i18n="sl_scan_btn">📷 مسح باركود لاختيار الصنف</button>
@@ -945,6 +978,24 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding-top:12px; border-top:1px dashed var(--line);">
           <span style="font-family:'Fraunces', serif; font-weight:700; font-size:15px;" data-i18n="sl_cart_total">المجموع الكلي</span>
           <span id="sl-cart-total" style="font-family:'Space Mono', monospace; font-weight:700; font-size:20px; color:var(--sage);">0 دج</span>
+        </div>
+        <div style="margin-top:12px; padding-top:10px; border-top:1px dashed var(--line);">
+          <div class="demo-group" data-group="sl-demo-gender">
+            <span class="demo-label">الجنس:</span>
+            <button type="button" class="demo-btn" data-value="male">ذكر</button>
+            <button type="button" class="demo-btn" data-value="female">أنثى</button>
+          </div>
+          <div class="demo-group" data-group="sl-demo-age">
+            <span class="demo-label">العمر:</span>
+            <button type="button" class="demo-btn" data-value="minor">قاصر</button>
+            <button type="button" class="demo-btn" data-value="adult">شاب/بالغ</button>
+            <button type="button" class="demo-btn" data-value="senior">كبير السن</button>
+          </div>
+          <div class="demo-group" data-group="sl-demo-type">
+            <span class="demo-label">الزبون:</span>
+            <button type="button" class="demo-btn" data-value="new">جديد</button>
+            <button type="button" class="demo-btn" data-value="returning">قديم</button>
+          </div>
         </div>
         <div class="toggle-row" style="margin-top:10px;">
           <input type="checkbox" id="sl-cart-print-toggle" checked>
@@ -1002,6 +1053,24 @@
             <label for="cu-debt-init" data-i18n="cu_debt_init_lbl">دين ابتدائي (دج، اتركه 0 إذا لا يوجد)</label>
             <input type="number" id="cu-debt-init" min="0" placeholder="0">
           </div>
+          <div class="full">
+            <div class="demo-group" data-group="cu-demo-gender">
+              <span class="demo-label">الجنس:</span>
+              <button type="button" class="demo-btn" data-value="male">ذكر</button>
+              <button type="button" class="demo-btn" data-value="female">أنثى</button>
+            </div>
+            <div class="demo-group" data-group="cu-demo-age">
+              <span class="demo-label">العمر:</span>
+              <button type="button" class="demo-btn" data-value="minor">قاصر</button>
+              <button type="button" class="demo-btn" data-value="adult">شاب/بالغ</button>
+              <button type="button" class="demo-btn" data-value="senior">كبير السن</button>
+            </div>
+            <div class="demo-group" data-group="cu-demo-type">
+              <span class="demo-label">الزبون:</span>
+              <button type="button" class="demo-btn" data-value="new">جديد</button>
+              <button type="button" class="demo-btn" data-value="returning">قديم</button>
+            </div>
+          </div>
           <button class="add-btn" id="cu-add" data-i18n="cu_add_btn">+ إضافة زبون</button>
         </div>
       </div>
@@ -1051,6 +1120,24 @@
           <div class="full">
             <label for="or-notes" data-i18n="or_notes_lbl">ملاحظات (اختياري)</label>
             <textarea id="or-notes" placeholder="أي تفاصيل إضافية..." data-i18n-ph="or_notes_ph"></textarea>
+          </div>
+          <div class="full">
+            <div class="demo-group" data-group="or-demo-gender">
+              <span class="demo-label">الجنس:</span>
+              <button type="button" class="demo-btn" data-value="male">ذكر</button>
+              <button type="button" class="demo-btn" data-value="female">أنثى</button>
+            </div>
+            <div class="demo-group" data-group="or-demo-age">
+              <span class="demo-label">العمر:</span>
+              <button type="button" class="demo-btn" data-value="minor">قاصر</button>
+              <button type="button" class="demo-btn" data-value="adult">شاب/بالغ</button>
+              <button type="button" class="demo-btn" data-value="senior">كبير السن</button>
+            </div>
+            <div class="demo-group" data-group="or-demo-type">
+              <span class="demo-label">الزبون:</span>
+              <button type="button" class="demo-btn" data-value="new">جديد</button>
+              <button type="button" class="demo-btn" data-value="returning">قديم</button>
+            </div>
           </div>
           <button class="add-btn" id="or-add" data-i18n="or_add_btn">+ تسجيل الطلب</button>
         </div>
@@ -1724,10 +1811,28 @@
           </div>`;
       } else if(flexyOpenId === f.id && flexyOpenMode === 'sale'){
         formHtml = `
-          <div class="flexy-form show">
+          <div class="flexy-form show" style="flex-direction:column; align-items:stretch;">
             <input type="number" min="0" step="1" class="fx-sale-amt" placeholder="المبلغ المباع للزبون (دج)">
-            <button class="mini-btn rose" data-action="save-sale" data-id="${f.id}">✓ تسجيل البيع</button>
-            <button class="mini-btn" data-action="close" data-id="${f.id}">إلغاء</button>
+            <div class="demo-group" data-group="fx-demo-gender-${f.id}">
+              <span class="demo-label">الجنس:</span>
+              <button type="button" class="demo-btn" data-value="male">ذكر</button>
+              <button type="button" class="demo-btn" data-value="female">أنثى</button>
+            </div>
+            <div class="demo-group" data-group="fx-demo-age-${f.id}">
+              <span class="demo-label">العمر:</span>
+              <button type="button" class="demo-btn" data-value="minor">قاصر</button>
+              <button type="button" class="demo-btn" data-value="adult">شاب/بالغ</button>
+              <button type="button" class="demo-btn" data-value="senior">كبير السن</button>
+            </div>
+            <div class="demo-group" data-group="fx-demo-type-${f.id}">
+              <span class="demo-label">الزبون:</span>
+              <button type="button" class="demo-btn" data-value="new">جديد</button>
+              <button type="button" class="demo-btn" data-value="returning">قديم</button>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="mini-btn rose" data-action="save-sale" data-id="${f.id}">✓ تسجيل البيع</button>
+              <button class="mini-btn" data-action="close" data-id="${f.id}">إلغاء</button>
+            </div>
           </div>`;
       } else if(flexyOpenId === f.id && flexyOpenMode === 'threshold'){
         formHtml = `
@@ -1811,6 +1916,14 @@
       document.getElementById('fx-hist-' + toggle.dataset.id).classList.toggle('show');
       return;
     }
+    const demoBtn = e.target.closest('.demo-btn');
+    if(demoBtn){
+      const group = demoBtn.closest('.demo-group');
+      const already = demoBtn.classList.contains('selected');
+      group.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('selected'));
+      if(!already) demoBtn.classList.add('selected');
+      return;
+    }
     const trigger = e.target.closest('[data-action]');
     if(!trigger) return;
     const action = trigger.dataset.action;
@@ -1837,10 +1950,13 @@
     } else if(action === 'save-sale'){
       const amt = Number(card.querySelector('.fx-sale-amt').value) || 0;
       if(amt <= 0) return;
+      const custGender = getDemoValue(`fx-demo-gender-${id}`);
+      const custAge = getDemoValue(`fx-demo-age-${id}`);
+      const custType = getDemoValue(`fx-demo-type-${id}`);
       state.flexy[idx].balance = Math.max(0, state.flexy[idx].balance - amt);
       state.flexy[idx].totalSold = (state.flexy[idx].totalSold || 0) + amt;
       state.flexy[idx].history = state.flexy[idx].history || [];
-      state.flexy[idx].history.push({ type:'sale', amount: amt, date: new Date().toISOString() });
+      state.flexy[idx].history.push({ type:'sale', amount: amt, date: new Date().toISOString(), custGender, custAge, custType });
     } else if(action === 'save-threshold'){
       const thr = Number(card.querySelector('.fx-threshold').value);
       state.flexy[idx].threshold = isNaN(thr) ? state.flexy[idx].threshold : thr;
@@ -1851,6 +1967,7 @@
     flexyOpenId = null; flexyOpenMode = null;
     await saveKey(KEYS.flexy, state.flexy);
     renderFlexy();
+    if(typeof renderAudienceReport === 'function') renderAudienceReport();
   });
 
   /* =========================================================
@@ -2078,6 +2195,7 @@
     renderTrendChart(periodSales);
     renderCategoryBreakdown(periodSales);
     renderTopProducts(periodSales);
+    if(typeof renderAudienceReport === 'function') renderAudienceReport();
   }
 
   /* =========================================================
@@ -2195,13 +2313,17 @@
     const shouldPrint = document.getElementById('sl-cart-print-toggle').checked;
     const cartSnapshot = cart.map(l => ({ ...l }));
     const total = cartSnapshot.reduce((s,l) => s + l.unitPrice*l.qty, 0);
+    const custGender = getDemoValue('sl-demo-gender');
+    const custAge = getDemoValue('sl-demo-age');
+    const custType = getDemoValue('sl-demo-type');
 
     cart.forEach(line => {
       const profit = line.costPrice !== null ? (line.unitPrice - line.costPrice) * line.qty : 0;
       const sale = {
         id: uid(), date: now, itemName: line.name, category: line.category,
         qty: line.qty, costPrice: line.costPrice, unitPrice: line.unitPrice,
-        total: line.qty*line.unitPrice, profit, stockId: line.stockId || null, groupId
+        total: line.qty*line.unitPrice, profit, stockId: line.stockId || null, groupId,
+        custGender, custAge, custType
       };
       state.sales.push(sale);
       if(line.stockId){
@@ -2217,6 +2339,7 @@
     cart = [];
     renderCart();
     renderSales();
+    resetDemoGroup('sl-demo-gender'); resetDemoGroup('sl-demo-age'); resetDemoGroup('sl-demo-type');
 
     if(shouldPrint) printInvoice(cartSnapshot, total, groupId, now);
   });
@@ -2315,11 +2438,14 @@
     const initDebt = cu.debtInit.value === '' ? 0 : Number(cu.debtInit.value);
     state.customers.push({
       id: uid(), name, phone: cu.phone.value.trim(), debt: initDebt,
-      history: initDebt > 0 ? [{ type:'debt', amount: initDebt, date: new Date().toISOString() }] : []
+      history: initDebt > 0 ? [{ type:'debt', amount: initDebt, date: new Date().toISOString() }] : [],
+      custGender: getDemoValue('cu-demo-gender'), custAge: getDemoValue('cu-demo-age'), custType: getDemoValue('cu-demo-type')
     });
     await saveKey(KEYS.customers, state.customers);
     cu.name.value=''; cu.phone.value=''; cu.debtInit.value='';
+    resetDemoGroup('cu-demo-gender'); resetDemoGroup('cu-demo-age'); resetDemoGroup('cu-demo-type');
     renderCustomers();
+    if(typeof renderAudienceReport === 'function') renderAudienceReport();
   });
 
   cu.search.addEventListener('input', renderCustomers);
@@ -2417,11 +2543,14 @@
     state.orders.push({
       id: uid(), customer, item, qty,
       date: or.date.value ? new Date(or.date.value).toISOString() : new Date().toISOString(),
-      notes: or.notes.value.trim(), status: 'pending'
+      notes: or.notes.value.trim(), status: 'pending',
+      custGender: getDemoValue('or-demo-gender'), custAge: getDemoValue('or-demo-age'), custType: getDemoValue('or-demo-type')
     });
     await saveKey(KEYS.orders, state.orders);
     or.customer.value=''; or.item.value=''; or.qty.value=''; or.date.value=''; or.notes.value='';
+    resetDemoGroup('or-demo-gender'); resetDemoGroup('or-demo-age'); resetDemoGroup('or-demo-type');
     renderOrders();
+    if(typeof renderAudienceReport === 'function') renderAudienceReport();
   });
 
   [or.search, or.statusFilter].forEach(el => {
@@ -2605,12 +2734,112 @@
     });
   }
 
+  /* =========================================================
+     تحليلات الجمهور (اختياري وسريع): الجنس، الفئة العمرية، نوع الزبون
+  ========================================================= */
+  function wireDemoGroup(groupName){
+    const group = document.querySelector(`[data-group="${groupName}"]`);
+    if(!group) return;
+    group.addEventListener('click', (e) => {
+      const btn = e.target.closest('.demo-btn'); if(!btn) return;
+      const alreadySelected = btn.classList.contains('selected');
+      group.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('selected'));
+      if(!alreadySelected) btn.classList.add('selected');
+    });
+  }
+
+  function getDemoValue(groupName){
+    const group = document.querySelector(`[data-group="${groupName}"]`);
+    if(!group) return null;
+    const sel = group.querySelector('.demo-btn.selected');
+    return sel ? sel.dataset.value : null;
+  }
+
+  function resetDemoGroup(groupName){
+    const group = document.querySelector(`[data-group="${groupName}"]`);
+    if(!group) return;
+    group.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('selected'));
+  }
+
+  ['sl-demo-gender','sl-demo-age','sl-demo-type',
+   'or-demo-gender','or-demo-age','or-demo-type',
+   'cu-demo-gender','cu-demo-age','cu-demo-type'].forEach(wireDemoGroup);
+
+  const DEMO_LABELS = {
+    gender: { male: 'ذكور', female: 'إناث' },
+    age: { minor: 'قاصرون', adult: 'شباب/بالغون', senior: 'كبار السن' },
+    type: { new: 'زبائن جدد', returning: 'زبائن قدامى' },
+  };
+
+  function renderBreakdownField(containerId, counts, title){
+    const el = document.getElementById(containerId);
+    if(!el) return 0;
+    const total = Object.values(counts).reduce((s,v) => s+v, 0);
+    if(total === 0){ el.innerHTML = ''; return 0; }
+    const sorted = Object.entries(counts).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]);
+    el.innerHTML = `<div style="font-family:'Fraunces', serif; font-size:12.5px; font-weight:700; margin-bottom:8px;">${title}</div>` +
+      sorted.map(([key, count]) => {
+        const pct = (count/total*100);
+        return `<div class="breakdown-row">
+          <div class="breakdown-head"><span class="name">${key}</span><span class="val">${fmt(pct)}٪ · ${count}</span></div>
+          <div class="breakdown-bar-bg"><div class="breakdown-bar-fill" style="width:${pct}%;"></div></div>
+        </div>`;
+      }).join('');
+    return total;
+  }
+
+  function renderAudienceReport(){
+    // نُقلّص مبيعات نفس عملية البيع (groupId) لحدث واحد فقط، حتى لا نحسب سلة بـ3 أصناف كـ3 زبائن
+    const seenGroups = new Set();
+    const dedupedSales = [];
+    state.sales.forEach(s => {
+      const key = s.groupId || s.id; // العمليات القديمة بلا groupId تُحسب فرادى كما كانت
+      if(seenGroups.has(key)) return;
+      seenGroups.add(key);
+      dedupedSales.push(s);
+    });
+
+    const flexySaleEvents = [];
+    (state.flexy || []).forEach(op => {
+      (op.history || []).forEach(h => {
+        if(h.type === 'sale' && (h.custGender || h.custAge || h.custType)){
+          flexySaleEvents.push({ gender: h.custGender, age: h.custAge, type: h.custType });
+        }
+      });
+    });
+
+    const allEvents = [
+      ...dedupedSales.map(s => ({ gender: s.custGender, age: s.custAge, type: s.custType })),
+      ...state.orders.map(o => ({ gender: o.custGender, age: o.custAge, type: o.custType })),
+      ...state.customers.map(c => ({ gender: c.custGender, age: c.custAge, type: c.custType })),
+      ...flexySaleEvents,
+    ];
+
+    const genderCounts = { [DEMO_LABELS.gender.male]:0, [DEMO_LABELS.gender.female]:0 };
+    const ageCounts = { [DEMO_LABELS.age.minor]:0, [DEMO_LABELS.age.adult]:0, [DEMO_LABELS.age.senior]:0 };
+    const typeCounts = { [DEMO_LABELS.type.new]:0, [DEMO_LABELS.type.returning]:0 };
+
+    allEvents.forEach(ev => {
+      if(ev.gender && DEMO_LABELS.gender[ev.gender]) genderCounts[DEMO_LABELS.gender[ev.gender]]++;
+      if(ev.age && DEMO_LABELS.age[ev.age]) ageCounts[DEMO_LABELS.age[ev.age]]++;
+      if(ev.type && DEMO_LABELS.type[ev.type]) typeCounts[DEMO_LABELS.type[ev.type]]++;
+    });
+
+    const t1 = renderBreakdownField('sl-audience-gender', genderCounts, 'حسب الجنس');
+    const t2 = renderBreakdownField('sl-audience-age', ageCounts, 'حسب الفئة العمرية');
+    const t3 = renderBreakdownField('sl-audience-type', typeCounts, 'زبائن جدد مقابل قدامى');
+
+    const emptyEl = document.getElementById('sl-audience-empty');
+    if(emptyEl) emptyEl.classList.toggle('show', (t1+t2+t3) === 0);
+  }
+
   function renderAllPanels(){
     renderStock();
     renderSales();
     renderFlexy();
     renderCustomers();
     renderOrders();
+    renderAudienceReport();
   }
 
   /* =========================================================
