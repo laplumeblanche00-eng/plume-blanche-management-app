@@ -644,6 +644,20 @@
   .top-product-name{ font-size:13.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .top-product-meta{ font-size:11px; color:var(--ink-soft); font-family:'Space Mono', monospace; direction:ltr; text-align:right; }
 
+  .founder-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 0;
+    border-bottom:1px dashed var(--line);
+  }
+  .founder-row:last-child{ border-bottom:none; }
+  .founder-row .fr-name{ font-size:14px; font-weight:700; }
+  .founder-row .fr-role{ font-size:10.5px; color:var(--ink-soft); margin-top:2px; }
+  .founder-row .fr-nums{ text-align:left; }
+  .founder-row .fr-monthly{ font-family:'Space Mono', monospace; font-weight:700; font-size:15px; color:var(--sage); }
+  .founder-row .fr-daily{ font-size:10.5px; color:var(--ink-soft); margin-top:2px; }
+
   .footnote{
     max-width:640px;
     margin:24px auto 0;
@@ -1279,6 +1293,19 @@
         </div>
       </div>
 
+      <div class="card">
+        <p class="card-title"><span class="quill">👑</span> رحلة المؤسس والمساعدين (رمزي — بلا خصم)</p>
+        <p style="font-size:11px; color:var(--ink-soft); margin:-8px 0 12px; line-height:1.7;">
+          نظام تجريبي شخصي: كل يوم عمل يزيد نقطة أقدمية واحدة لا تنتهي ولا تتصفر. الراتب اليومي = نقاط الأقدمية، والراتب الشهري = الراتب اليومي × 28. هذا حساب رمزي تحفيزي فقط، ولا يُخصم من أرباح المحل الفعلية.
+        </p>
+        <div id="fi-founder-list"></div>
+        <div style="display:flex; gap:10px; margin-top:14px; padding-top:12px; border-top:1px dashed var(--line);">
+          <input type="text" id="fi-helper-name" placeholder="اسم المساعد" style="flex:2;">
+          <input type="date" id="fi-helper-date" style="flex:1;">
+          <button class="mini-btn sage" id="fi-helper-add" style="flex:1;">+ إضافة</button>
+        </div>
+      </div>
+
       <p class="card-title" style="padding:0 2px;"><span class="quill">📖</span> سجل المصاريف والمداخيل اليدوية</p>
       <div class="ledger" id="fi-ledger"></div>
       <div class="empty-state" id="fi-empty">لا توجد مصاريف أو مداخيل يدوية مسجلة بعد.</div>
@@ -1314,10 +1341,12 @@
     flexy: 'plume-blanche-flexy',
     expenses: 'plume-blanche-expenses',
     otherIncome: 'plume-blanche-other-income',
+    founderTeam: 'plume-blanche-founder-team',
   };
 
   let storageAvailable = true;
-  let state = { stock: [], sales: [], customers: [], orders: [], flexy: [], expenses: [], otherIncome: [] };
+  let state = { stock: [], sales: [], customers: [], orders: [], flexy: [], expenses: [], otherIncome: [], founderTeam: [] };
+  const SHOP_OPENING_DATE = '2025-09-11';
 
   const DEFAULT_FLEXY_OPERATORS = [
     { id:'mobilis', name:'Mobilis' },
@@ -2711,6 +2740,7 @@
       flexy: state.flexy,
       expenses: state.expenses,
       otherIncome: state.otherIncome,
+      founderTeam: state.founderTeam,
     };
   }
 
@@ -2759,6 +2789,7 @@
       state.flexy = mergeFlexy(state.flexy, data.flexy);
       state.expenses = mergeArraysById(state.expenses, data.expenses);
       state.otherIncome = mergeArraysById(state.otherIncome, data.otherIncome);
+      state.founderTeam = mergeArraysById(state.founderTeam, data.founderTeam);
       ensureFlexyDefaults();
     } else {
       const wantReplace = confirm('هل تريد استبدال كل البيانات الحالية بالكامل بمحتوى هذا النص/الملف؟ (سيُحذف كل ما هو غير موجود فيه — لا يمكن التراجع)');
@@ -2771,6 +2802,7 @@
       state.flexy = Array.isArray(data.flexy) ? data.flexy : [];
       state.expenses = Array.isArray(data.expenses) ? data.expenses : [];
       state.otherIncome = Array.isArray(data.otherIncome) ? data.otherIncome : [];
+      state.founderTeam = Array.isArray(data.founderTeam) ? data.founderTeam : [];
       ensureFlexyDefaults();
     }
 
@@ -2781,6 +2813,7 @@
     await saveKey(KEYS.flexy, state.flexy);
     await saveKey(KEYS.expenses, state.expenses);
     await saveKey(KEYS.otherIncome, state.otherIncome);
+    await saveKey(KEYS.founderTeam, state.founderTeam);
 
     renderAllPanels();
     return true;
@@ -3253,6 +3286,76 @@
     renderFinance();
   });
 
+  /* =========================================================
+     رحلة المؤسس والمساعدين (رمزي بحت — لا يخصم من الأرباح)
+  ========================================================= */
+  const founderListEl = document.getElementById('fi-founder-list');
+  const helperNameInput = document.getElementById('fi-helper-name');
+  const helperDateInput = document.getElementById('fi-helper-date');
+  const helperAddBtn = document.getElementById('fi-helper-add');
+
+  function seniorityDays(startDateStr){
+    const start = new Date(startDateStr); start.setHours(0,0,0,0);
+    const now = new Date(); now.setHours(0,0,0,0);
+    return Math.max(0, Math.floor((now - start) / 86400000));
+  }
+
+  function renderFounderTeam(){
+    founderListEl.innerHTML = '';
+
+    const founderDays = seniorityDays(SHOP_OPENING_DATE);
+    const founderRow = document.createElement('div');
+    founderRow.className = 'founder-row';
+    founderRow.innerHTML = `
+      <div>
+        <div class="fr-name">👑 المؤسس</div>
+        <div class="fr-role">منذ افتتاح المحل — ${new Date(SHOP_OPENING_DATE).toLocaleDateString('ar-DZ')} · ${founderDays} يوم أقدمية</div>
+      </div>
+      <div class="fr-nums">
+        <div class="fr-monthly">${fmt(founderDays*28)} دج/شهريًا</div>
+        <div class="fr-daily">${fmt(founderDays)} دج/يوميًا</div>
+      </div>
+    `;
+    founderListEl.appendChild(founderRow);
+
+    (state.founderTeam || []).forEach(person => {
+      const days = seniorityDays(person.startDate);
+      const row = document.createElement('div');
+      row.className = 'founder-row';
+      row.innerHTML = `
+        <div>
+          <div class="fr-name">${escapeHtml(person.name)}</div>
+          <div class="fr-role">منذ ${new Date(person.startDate).toLocaleDateString('ar-DZ')} · ${days} يوم أقدمية</div>
+        </div>
+        <div class="fr-nums" style="display:flex; align-items:center; gap:8px;">
+          <div>
+            <div class="fr-monthly">${fmt(days*28)} دج/شهريًا</div>
+            <div class="fr-daily">${fmt(days)} دج/يوميًا</div>
+          </div>
+          <button class="ev-del" data-action="del-helper" data-id="${person.id}" aria-label="حذف">×</button>
+        </div>
+      `;
+      founderListEl.appendChild(row);
+    });
+  }
+
+  founderListEl.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-action="del-helper"]'); if(!btn) return;
+    state.founderTeam = state.founderTeam.filter(p => p.id !== btn.dataset.id);
+    await saveKey(KEYS.founderTeam, state.founderTeam);
+    renderFounderTeam();
+  });
+
+  helperAddBtn.addEventListener('click', async () => {
+    const name = helperNameInput.value.trim();
+    const startDate = helperDateInput.value;
+    if(!name || !startDate) return;
+    state.founderTeam.push({ id: uid(), name, startDate: new Date(startDate).toISOString() });
+    await saveKey(KEYS.founderTeam, state.founderTeam);
+    helperNameInput.value = ''; helperDateInput.value = '';
+    renderFounderTeam();
+  });
+
   function renderAllPanels(){
     renderStock();
     renderSales();
@@ -3261,6 +3364,7 @@
     renderOrders();
     renderAudienceReport();
     renderFinance();
+    renderFounderTeam();
   }
 
   /* =========================================================
@@ -3278,6 +3382,7 @@
     state.flexy = await loadKey(KEYS.flexy);
     state.expenses = await loadKey(KEYS.expenses);
     state.otherIncome = await loadKey(KEYS.otherIncome);
+    state.founderTeam = await loadKey(KEYS.founderTeam);
     ensureFlexyDefaults();
     await saveKey(KEYS.flexy, state.flexy);
     or.date.value = todayISO();
@@ -3293,6 +3398,7 @@
       listenKeyLive(KEYS.flexy, data => { state.flexy = data; renderFlexy(); });
       listenKeyLive(KEYS.expenses, data => { state.expenses = data; renderFinance(); });
       listenKeyLive(KEYS.otherIncome, data => { state.otherIncome = data; renderFinance(); });
+      listenKeyLive(KEYS.founderTeam, data => { state.founderTeam = data; renderFounderTeam(); });
     }
   })();
 </script>
