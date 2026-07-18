@@ -23,11 +23,12 @@
   :root{
     --navy:#1c2233;
     --navy-2:#242c42;
-    --paper:#f3ead7;
-    --paper-2:#ede2c9;
-    --line:#cdbd97;
-    --ink:#2a2620;
-    --ink-soft:#7a715d;
+    --page-bg:#f7f6f3;
+    --paper:#ffffff;
+    --paper-2:#f0efe9;
+    --line:#e1dfd7;
+    --ink:#20263a;
+    --ink-soft:#767b8a;
     --ink-accent:#2c3648;
     --ink-accent-dim:#4a5872;
     --accent-on-dark:#f3ead7;
@@ -37,7 +38,7 @@
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    background:var(--navy);
+    background:var(--page-bg);
     color:var(--ink);
     font-family:'Cairo', sans-serif;
     min-height:100vh;
@@ -106,22 +107,23 @@
     flex:1;
     white-space:nowrap;
     text-align:center;
-    background:var(--navy-2);
-    color:#a9a190;
-    border:1px solid #363f57;
+    background:var(--paper-2);
+    color:var(--ink-soft);
+    border:1px solid var(--line);
     font-family:'Cairo', sans-serif;
     font-size:12.5px;
-    font-weight:600;
+    font-weight:700;
+    letter-spacing:0.3px;
     padding:10px 8px;
     border-radius:9px 9px 0 0;
     cursor:pointer;
     transition:all .2s ease;
   }
   .tab.active{
-    background:var(--paper);
-    color:var(--ink);
-    border-color:var(--ink-accent);
-    border-bottom-color:var(--paper);
+    background:var(--navy);
+    color:var(--accent-on-dark);
+    border-color:var(--navy);
+    border-bottom-color:var(--navy);
   }
 
   .page{
@@ -269,9 +271,9 @@
     gap:8px;
     margin:-4px 0 16px;
     font-size:12.5px;
-    color:#c9bfa8;
+    color:var(--ink-soft);
   }
-  .toggle-row input{ width:auto; accent-color:var(--accent-on-dark); }
+  .toggle-row input{ width:auto; accent-color:var(--ink-accent); }
 
   /* --- سجل / دفتر مسطر --- */
   .ledger{
@@ -511,6 +513,18 @@
   }
   .empty-state.hide{ display:none; }
 
+  .perf-banner{
+    text-align:center;
+    padding:16px;
+    border-radius:12px;
+    font-weight:800;
+    font-size:15px;
+    margin-bottom:20px;
+  }
+  .perf-banner.good{ background:rgba(84,114,79,0.12); color:var(--sage); border:1px solid rgba(84,114,79,0.3); }
+  .perf-banner.ok{ background:rgba(169,131,47,0.12); color:#8a6b26; border:1px solid rgba(169,131,47,0.3); }
+  .perf-banner.bad{ background:rgba(156,59,52,0.12); color:var(--rose); border:1px solid rgba(156,59,52,0.3); }
+
   .storage-warning{
     background:rgba(169,131,47,0.12);
     border:1px solid #8a6b26;
@@ -532,9 +546,9 @@
   .period-btn{
     flex:1;
     text-align:center;
-    background:var(--navy-2);
-    color:#a9a190;
-    border:1px solid #363f57;
+    background:var(--paper-2);
+    color:var(--ink-soft);
+    border:1px solid var(--line);
     font-family:'Cairo', sans-serif;
     font-size:12.5px;
     font-weight:600;
@@ -544,9 +558,9 @@
     transition:all .2s ease;
   }
   .period-btn.active{
-    background:var(--accent-on-dark);
-    color:var(--ink);
-    border-color:var(--accent-on-dark);
+    background:var(--navy);
+    color:var(--accent-on-dark);
+    border-color:var(--navy);
   }
 
   /* --- الرسم البياني لتطور الإيرادات --- */
@@ -634,7 +648,7 @@
     max-width:640px;
     margin:24px auto 0;
     padding:0 16px;
-    color:#8b8877;
+    color:var(--ink-soft);
     font-size:11px;
     line-height:1.8;
     text-align:center;
@@ -755,6 +769,7 @@
     <div class="tab" data-tab="flexy" data-i18n="tab_flexy">الفليكسي</div>
     <div class="tab" data-tab="customers" data-i18n="tab_customers">الزبائن والديون</div>
     <div class="tab" data-tab="orders" data-i18n="tab_orders">طلبات الزبائن</div>
+    <div class="tab" data-tab="finance">📊 الأداء المالي</div>
   </div>
 
   <div class="page">
@@ -1157,6 +1172,118 @@
       <div class="empty-state" id="or-empty" data-i18n="or_empty">لا توجد طلبات مسجلة بعد.</div>
     </div>
 
+    <!-- ============ تبويب: الأداء المالي ============ -->
+    <div class="tab-panel" id="panel-finance">
+
+      <div class="period-bar" id="fi-period-bar">
+        <div class="period-btn active" data-period="day">اليوم</div>
+        <div class="period-btn" data-period="week">الأسبوع</div>
+        <div class="period-btn" data-period="month">الشهر</div>
+        <div class="period-btn" data-period="year">السنة</div>
+        <div class="period-btn" data-period="all">الكل</div>
+      </div>
+
+      <div id="fi-perf-banner" class="perf-banner ok">جارِ الحساب...</div>
+
+      <div class="summary">
+        <div class="summary-cell good">
+          <div class="num" id="fi-income">0</div>
+          <div class="lbl">💵 إجمالي المداخيل (دج)</div>
+        </div>
+        <div class="summary-cell warn">
+          <div class="num" id="fi-expenses">0</div>
+          <div class="lbl">💸 إجمالي المصاريف (دج)</div>
+        </div>
+        <div class="summary-cell">
+          <div class="num" id="fi-net">0</div>
+          <div class="lbl">📈 صافي الربح (دج)</div>
+        </div>
+        <div class="summary-cell">
+          <div class="num" id="fi-margin">0٪</div>
+          <div class="lbl">هامش الربح</div>
+        </div>
+        <div class="summary-cell">
+          <div class="num" id="fi-daily">0</div>
+          <div class="lbl">متوسط الربح اليومي (دج)</div>
+        </div>
+        <div class="summary-cell">
+          <div class="num" id="fi-monthly">0</div>
+          <div class="lbl">متوسط الربح الشهري (دج)</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title"><span class="quill">📊</span> الربح الصافي شهريًا (آخر 12 شهرًا)</p>
+        <div class="trend-chart" id="fi-trend"></div>
+        <div class="trend-empty" id="fi-trend-empty">لا توجد بيانات كافية بعد لعرض الرسم البياني.</div>
+      </div>
+
+      <div class="card">
+        <p class="card-title"><span class="quill">💵</span> تفصيل المداخيل</p>
+        <div id="fi-income-breakdown"></div>
+      </div>
+
+      <div class="card">
+        <p class="card-title"><span class="quill">✒</span> إضافة دخل آخر (يدوي)</p>
+        <div class="form-grid">
+          <div class="full">
+            <label for="fi-income-desc">الوصف</label>
+            <input type="text" id="fi-income-desc" placeholder="مثلاً: بيع جهاز قديم">
+          </div>
+          <div>
+            <label for="fi-income-amt">المبلغ (دج)</label>
+            <input type="number" id="fi-income-amt" min="0" step="0.5" placeholder="0">
+          </div>
+          <div>
+            <label for="fi-income-date">التاريخ</label>
+            <input type="date" id="fi-income-date">
+          </div>
+          <button class="add-btn" id="fi-income-add">+ إضافة الدخل</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title"><span class="quill">💸</span> تفصيل المصاريف</p>
+        <div id="fi-expense-breakdown"></div>
+      </div>
+
+      <div class="card">
+        <p class="card-title"><span class="quill">✒</span> إضافة مصروف</p>
+        <div class="form-grid">
+          <div class="full">
+            <label for="fi-exp-cat">نوع المصروف</label>
+            <select id="fi-exp-cat">
+              <option value="شراء البضائع">شراء البضائع</option>
+              <option value="إيجار المحل">إيجار المحل</option>
+              <option value="الكهرباء والإنترنت">الكهرباء والإنترنت</option>
+              <option value="الضرائب">الضرائب</option>
+              <option value="الضمان الاجتماعي">الضمان الاجتماعي</option>
+              <option value="صيانة المعدات">صيانة المعدات</option>
+              <option value="أجور المساعدين">أجور المساعدين</option>
+              <option value="مصاريف متنوعة">مصاريف متنوعة</option>
+            </select>
+          </div>
+          <div>
+            <label for="fi-exp-amt">المبلغ (دج)</label>
+            <input type="number" id="fi-exp-amt" min="0" step="0.5" placeholder="0">
+          </div>
+          <div>
+            <label for="fi-exp-date">التاريخ</label>
+            <input type="date" id="fi-exp-date">
+          </div>
+          <div class="full">
+            <label for="fi-exp-notes">ملاحظات (اختياري)</label>
+            <input type="text" id="fi-exp-notes" placeholder="أي تفاصيل إضافية...">
+          </div>
+          <button class="add-btn" id="fi-exp-add">+ إضافة المصروف</button>
+        </div>
+      </div>
+
+      <p class="card-title" style="padding:0 2px;"><span class="quill">📖</span> سجل المصاريف والمداخيل اليدوية</p>
+      <div class="ledger" id="fi-ledger"></div>
+      <div class="empty-state" id="fi-empty">لا توجد مصاريف أو مداخيل يدوية مسجلة بعد.</div>
+    </div>
+
   </div>
 
   <p class="footnote" data-i18n="footnote">
@@ -1185,10 +1312,12 @@
     customers: 'plume-blanche-customers',
     orders: 'plume-blanche-orders',
     flexy: 'plume-blanche-flexy',
+    expenses: 'plume-blanche-expenses',
+    otherIncome: 'plume-blanche-other-income',
   };
 
   let storageAvailable = true;
-  let state = { stock: [], sales: [], customers: [], orders: [], flexy: [] };
+  let state = { stock: [], sales: [], customers: [], orders: [], flexy: [], expenses: [], otherIncome: [] };
 
   const DEFAULT_FLEXY_OPERATORS = [
     { id:'mobilis', name:'Mobilis' },
@@ -2580,6 +2709,8 @@
       customers: state.customers,
       orders: state.orders,
       flexy: state.flexy,
+      expenses: state.expenses,
+      otherIncome: state.otherIncome,
     };
   }
 
@@ -2626,6 +2757,8 @@
       state.customers = mergeArraysById(state.customers, data.customers);
       state.orders = mergeArraysById(state.orders, data.orders);
       state.flexy = mergeFlexy(state.flexy, data.flexy);
+      state.expenses = mergeArraysById(state.expenses, data.expenses);
+      state.otherIncome = mergeArraysById(state.otherIncome, data.otherIncome);
       ensureFlexyDefaults();
     } else {
       const wantReplace = confirm('هل تريد استبدال كل البيانات الحالية بالكامل بمحتوى هذا النص/الملف؟ (سيُحذف كل ما هو غير موجود فيه — لا يمكن التراجع)');
@@ -2636,6 +2769,8 @@
       state.customers = Array.isArray(data.customers) ? data.customers : [];
       state.orders = Array.isArray(data.orders) ? data.orders : [];
       state.flexy = Array.isArray(data.flexy) ? data.flexy : [];
+      state.expenses = Array.isArray(data.expenses) ? data.expenses : [];
+      state.otherIncome = Array.isArray(data.otherIncome) ? data.otherIncome : [];
       ensureFlexyDefaults();
     }
 
@@ -2644,6 +2779,8 @@
     await saveKey(KEYS.customers, state.customers);
     await saveKey(KEYS.orders, state.orders);
     await saveKey(KEYS.flexy, state.flexy);
+    await saveKey(KEYS.expenses, state.expenses);
+    await saveKey(KEYS.otherIncome, state.otherIncome);
 
     renderAllPanels();
     return true;
@@ -2833,6 +2970,289 @@
     if(emptyEl) emptyEl.classList.toggle('show', (t1+t2+t3) === 0);
   }
 
+  /* =========================================================
+     الأداء المالي
+  ========================================================= */
+  const fi = {
+    periodBar: document.getElementById('fi-period-bar'),
+    perfBanner: document.getElementById('fi-perf-banner'),
+    income: document.getElementById('fi-income'),
+    expenses: document.getElementById('fi-expenses'),
+    net: document.getElementById('fi-net'),
+    margin: document.getElementById('fi-margin'),
+    daily: document.getElementById('fi-daily'),
+    monthly: document.getElementById('fi-monthly'),
+    trend: document.getElementById('fi-trend'),
+    trendEmpty: document.getElementById('fi-trend-empty'),
+    incomeBreakdown: document.getElementById('fi-income-breakdown'),
+    expenseBreakdown: document.getElementById('fi-expense-breakdown'),
+    incomeDesc: document.getElementById('fi-income-desc'),
+    incomeAmt: document.getElementById('fi-income-amt'),
+    incomeDate: document.getElementById('fi-income-date'),
+    incomeAdd: document.getElementById('fi-income-add'),
+    expCat: document.getElementById('fi-exp-cat'),
+    expAmt: document.getElementById('fi-exp-amt'),
+    expDate: document.getElementById('fi-exp-date'),
+    expNotes: document.getElementById('fi-exp-notes'),
+    expAdd: document.getElementById('fi-exp-add'),
+    ledger: document.getElementById('fi-ledger'),
+    empty: document.getElementById('fi-empty'),
+  };
+
+  let financePeriod = 'day';
+
+  fi.periodBar.addEventListener('click', (e) => {
+    const btn = e.target.closest('.period-btn'); if(!btn) return;
+    financePeriod = btn.dataset.period;
+    fi.periodBar.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b === btn));
+    renderFinance();
+  });
+
+  function financePeriodStart(period){
+    if(period === 'all') return null;
+    return periodStart(period);
+  }
+
+  function periodDaysCount(period, start){
+    if(period === 'day') return 1;
+    if(period === 'week') return 7;
+    if(period === 'month') return 30;
+    if(period === 'year') return 365;
+    // all: من أول سجل موجود إلى اليوم
+    const allDates = [
+      ...state.sales.map(s => new Date(s.date)),
+      ...state.expenses.map(e => new Date(e.date)),
+      ...state.otherIncome.map(i => new Date(i.date)),
+    ];
+    if(allDates.length === 0) return 1;
+    const earliest = new Date(Math.min(...allDates.map(d => d.getTime())));
+    const days = Math.max(1, Math.round((new Date() - earliest) / 86400000));
+    return days;
+  }
+
+  function computeFlexyProfitInPeriod(start){
+    let totalSold = 0, totalFace = 0, totalCost = 0;
+    (state.flexy || []).forEach(op => {
+      (op.history || []).forEach(h => {
+        if(start && new Date(h.date) < start) return;
+        if(h.type === 'sale') totalSold += h.amount;
+        else if(h.type === 'refill'){ totalFace += h.amount; totalCost += (h.cost || 0); }
+      });
+    });
+    const marginRate = totalFace > 0 ? (totalFace - totalCost) / totalFace : 0;
+    return totalSold * marginRate;
+  }
+
+  function renderFinance(){
+    const start = financePeriodStart(financePeriod);
+    const inPeriod = (dateStr) => !start || new Date(dateStr) >= start;
+
+    const periodSales = state.sales.filter(s => inPeriod(s.date));
+    const productIncome = periodSales.filter(s => s.category !== 'خدمات').reduce((s,x) => s + x.total, 0);
+    const serviceIncome = periodSales.filter(s => s.category === 'خدمات').reduce((s,x) => s + x.total, 0);
+    const flexyProfit = computeFlexyProfitInPeriod(start);
+    const periodOtherIncome = (state.otherIncome || []).filter(i => inPeriod(i.date));
+    const otherIncomeTotal = periodOtherIncome.reduce((s,x) => s + x.amount, 0);
+
+    const totalIncome = productIncome + serviceIncome + flexyProfit + otherIncomeTotal;
+
+    const periodExpenses = (state.expenses || []).filter(e => inPeriod(e.date));
+    const totalExpenses = periodExpenses.reduce((s,x) => s + x.amount, 0);
+
+    const netProfit = totalIncome - totalExpenses;
+    const margin = totalIncome > 0 ? (netProfit / totalIncome * 100) : 0;
+    const days = periodDaysCount(financePeriod, start);
+    const dailyAvg = netProfit / days;
+    const monthlyAvg = dailyAvg * 30;
+
+    fi.income.textContent = fmt(totalIncome);
+    fi.expenses.textContent = fmt(totalExpenses);
+    fi.net.textContent = fmt(netProfit);
+    fi.margin.textContent = fmt(margin) + '٪';
+    fi.daily.textContent = fmt(dailyAvg);
+    fi.monthly.textContent = fmt(monthlyAvg);
+
+    // بطاقة الأداء
+    fi.perfBanner.classList.remove('good','ok','bad');
+    if(totalIncome === 0 && totalExpenses === 0){
+      fi.perfBanner.textContent = '⚪ لا توجد بيانات كافية بعد لهذه الفترة';
+      fi.perfBanner.classList.add('ok');
+    } else if(netProfit < 0){
+      fi.perfBanner.textContent = '🔴 أداء المحل: خسارة';
+      fi.perfBanner.classList.add('bad');
+    } else if(margin >= 20){
+      fi.perfBanner.textContent = '🟢 أداء المحل: ممتاز';
+      fi.perfBanner.classList.add('good');
+    } else {
+      fi.perfBanner.textContent = '🟡 أداء المحل: مستقر';
+      fi.perfBanner.classList.add('ok');
+    }
+
+    // تفصيل المداخيل
+    const incomeCats = {
+      'مبيعات المنتجات': productIncome,
+      'خدمات الطباعة والتصوير': serviceIncome,
+      'أرباح الفليكسي': flexyProfit,
+      'مداخيل أخرى': otherIncomeTotal,
+    };
+    fi.incomeBreakdown.innerHTML = '';
+    const incomeTotalForPct = totalIncome || 1;
+    const incomeEntries = Object.entries(incomeCats).filter(([,v]) => v !== 0);
+    if(incomeEntries.length === 0){
+      fi.incomeBreakdown.innerHTML = '<div class="trend-empty show">لا توجد مداخيل مسجلة في هذه الفترة.</div>';
+    } else {
+      incomeEntries.sort((a,b) => b[1]-a[1]).forEach(([label, amt]) => {
+        const pct = amt/incomeTotalForPct*100;
+        const row = document.createElement('div');
+        row.className = 'breakdown-row';
+        row.innerHTML = `
+          <div class="breakdown-head"><span class="name">${escapeHtml(label)}</span><span class="val">${fmt(pct)}٪ · ${fmt(amt)} دج</span></div>
+          <div class="breakdown-bar-bg"><div class="breakdown-bar-fill" style="width:${Math.max(0,pct)}%;"></div></div>
+        `;
+        fi.incomeBreakdown.appendChild(row);
+      });
+    }
+
+    // تفصيل المصاريف حسب الفئة
+    const expenseCats = {};
+    periodExpenses.forEach(e => { expenseCats[e.category] = (expenseCats[e.category] || 0) + e.amount; });
+    fi.expenseBreakdown.innerHTML = '';
+    if(Object.keys(expenseCats).length === 0){
+      fi.expenseBreakdown.innerHTML = '<div class="trend-empty show">لا توجد مصاريف مسجلة في هذه الفترة.</div>';
+    } else {
+      const totalExp = totalExpenses || 1;
+      Object.entries(expenseCats).sort((a,b) => b[1]-a[1]).forEach(([cat, amt]) => {
+        const pct = amt/totalExp*100;
+        const row = document.createElement('div');
+        row.className = 'breakdown-row';
+        row.innerHTML = `
+          <div class="breakdown-head"><span class="name">${escapeHtml(cat)}</span><span class="val">${fmt(pct)}٪ · ${fmt(amt)} دج</span></div>
+          <div class="breakdown-bar-bg"><div class="breakdown-bar-fill" style="width:${pct}%; background:var(--rose);"></div></div>
+        `;
+        fi.expenseBreakdown.appendChild(row);
+      });
+    }
+
+    // الرسم البياني: الربح الصافي شهريًا لآخر 12 شهرًا
+    renderFinanceTrend();
+
+    // سجل المصاريف والمداخيل اليدوية
+    renderFinanceLedger();
+  }
+
+  function renderFinanceTrend(){
+    const buckets = [];
+    for(let i = 11; i >= 0; i--){
+      const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i);
+      const key = d.getFullYear() + '-' + d.getMonth();
+      const label = d.toLocaleDateString('ar-DZ', { month:'short' });
+      buckets.push({ key, label, value:0 });
+    }
+    function monthKey(dateStr){ const d = new Date(dateStr); return d.getFullYear() + '-' + d.getMonth(); }
+
+    state.sales.forEach(s => {
+      const b = buckets.find(x => x.key === monthKey(s.date));
+      if(b) b.value += s.total;
+    });
+    (state.otherIncome || []).forEach(i => {
+      const b = buckets.find(x => x.key === monthKey(i.date));
+      if(b) b.value += i.amount;
+    });
+    (state.flexy || []).forEach(op => {
+      (op.history || []).forEach(h => {
+        if(h.type !== 'sale') return;
+        const b = buckets.find(x => x.key === monthKey(h.date));
+        if(!b) return;
+        // نسبة ربح تقريبية إجمالية للمتعامل تُطبَّق على البيع بنفس الشهر
+        const marginRate = op.totalFace > 0 ? ((op.totalFace - op.totalCost) / op.totalFace) : 0;
+        b.value += h.amount * marginRate;
+      });
+    });
+    (state.expenses || []).forEach(e => {
+      const b = buckets.find(x => x.key === monthKey(e.date));
+      if(b) b.value -= e.amount;
+    });
+
+    fi.trend.innerHTML = '';
+    const max = Math.max(...buckets.map(b => Math.abs(b.value)), 1);
+    const hasData = buckets.some(b => b.value !== 0);
+    fi.trendEmpty.classList.toggle('show', !hasData);
+
+    buckets.forEach(b => {
+      const wrap = document.createElement('div');
+      wrap.className = 'trend-bar-wrap';
+      const h = Math.max(2, Math.round((Math.abs(b.value) / max) * 90));
+      const color = b.value < 0 ? 'var(--rose)' : 'var(--sage)';
+      wrap.innerHTML = `<div class="trend-bar" style="height:${h}px; background:${color};" title="${fmt(b.value)} دج"></div><div class="trend-bar-label">${b.label}</div>`;
+      fi.trend.appendChild(wrap);
+    });
+  }
+
+  function renderFinanceLedger(){
+    const combined = [
+      ...(state.expenses || []).map(e => ({ ...e, kind:'expense' })),
+      ...(state.otherIncome || []).map(i => ({ ...i, kind:'income' })),
+    ].sort((a,b) => new Date(b.date) - new Date(a.date));
+
+    fi.ledger.innerHTML = '';
+    fi.empty.classList.toggle('hide', combined.length > 0);
+
+    combined.slice(0, 40).forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'ledger-row';
+      const isExpense = item.kind === 'expense';
+      row.innerHTML = `
+        <div class="ledger-info">
+          <div class="ledger-name">${escapeHtml(isExpense ? item.category : item.description)}</div>
+          <div class="ledger-meta rtl-text">${new Date(item.date).toLocaleDateString('ar-DZ')} ${item.notes ? '· ' + escapeHtml(item.notes) : ''}</div>
+          <div class="ledger-meta" style="color:${isExpense ? 'var(--rose)' : 'var(--sage)'};">${isExpense ? '− ' : '+ '}${fmt(item.amount)} دج</div>
+        </div>
+        <button class="ev-del" data-action="del-${item.kind}" data-id="${item.id}" aria-label="حذف">×</button>
+      `;
+      fi.ledger.appendChild(row);
+    });
+  }
+
+  fi.incomeAdd.addEventListener('click', async () => {
+    const description = fi.incomeDesc.value.trim();
+    const amount = Number(fi.incomeAmt.value);
+    if(!description || !amount) return;
+    state.otherIncome.push({
+      id: uid(), description, amount,
+      date: fi.incomeDate.value ? new Date(fi.incomeDate.value).toISOString() : new Date().toISOString(),
+    });
+    await saveKey(KEYS.otherIncome, state.otherIncome);
+    fi.incomeDesc.value=''; fi.incomeAmt.value=''; fi.incomeDate.value='';
+    renderFinance();
+  });
+
+  fi.expAdd.addEventListener('click', async () => {
+    const category = fi.expCat.value;
+    const amount = Number(fi.expAmt.value);
+    if(!amount) return;
+    state.expenses.push({
+      id: uid(), category, amount,
+      date: fi.expDate.value ? new Date(fi.expDate.value).toISOString() : new Date().toISOString(),
+      notes: fi.expNotes.value.trim(),
+    });
+    await saveKey(KEYS.expenses, state.expenses);
+    fi.expAmt.value=''; fi.expDate.value=''; fi.expNotes.value='';
+    renderFinance();
+  });
+
+  fi.ledger.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button'); if(!btn) return;
+    const action = btn.dataset.action;
+    if(action === 'del-expense'){
+      state.expenses = state.expenses.filter(x => x.id !== btn.dataset.id);
+      await saveKey(KEYS.expenses, state.expenses);
+    } else if(action === 'del-income'){
+      state.otherIncome = state.otherIncome.filter(x => x.id !== btn.dataset.id);
+      await saveKey(KEYS.otherIncome, state.otherIncome);
+    }
+    renderFinance();
+  });
+
   function renderAllPanels(){
     renderStock();
     renderSales();
@@ -2840,6 +3260,7 @@
     renderCustomers();
     renderOrders();
     renderAudienceReport();
+    renderFinance();
   }
 
   /* =========================================================
@@ -2855,9 +3276,13 @@
     state.customers = await loadKey(KEYS.customers);
     state.orders = await loadKey(KEYS.orders);
     state.flexy = await loadKey(KEYS.flexy);
+    state.expenses = await loadKey(KEYS.expenses);
+    state.otherIncome = await loadKey(KEYS.otherIncome);
     ensureFlexyDefaults();
     await saveKey(KEYS.flexy, state.flexy);
     or.date.value = todayISO();
+    fi.expDate.value = todayISO();
+    fi.incomeDate.value = todayISO();
     applyLanguage();
 
     if(firebaseReady){
@@ -2866,6 +3291,8 @@
       listenKeyLive(KEYS.customers, data => { state.customers = data; renderCustomers(); });
       listenKeyLive(KEYS.orders, data => { state.orders = data; renderOrders(); });
       listenKeyLive(KEYS.flexy, data => { state.flexy = data; renderFlexy(); });
+      listenKeyLive(KEYS.expenses, data => { state.expenses = data; renderFinance(); });
+      listenKeyLive(KEYS.otherIncome, data => { state.otherIncome = data; renderFinance(); });
     }
   })();
 </script>
