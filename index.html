@@ -644,19 +644,24 @@
   .top-product-name{ font-size:13.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .top-product-meta{ font-size:11px; color:var(--ink-soft); font-family:'Space Mono', monospace; direction:ltr; text-align:right; }
 
-  .founder-row{
+  .person-card{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .person-head{
     display:flex;
     justify-content:space-between;
-    align-items:center;
-    padding:12px 0;
-    border-bottom:1px dashed var(--line);
+    align-items:flex-start;
   }
-  .founder-row:last-child{ border-bottom:none; }
-  .founder-row .fr-name{ font-size:14px; font-weight:700; }
-  .founder-row .fr-role{ font-size:10.5px; color:var(--ink-soft); margin-top:2px; }
-  .founder-row .fr-nums{ text-align:left; }
-  .founder-row .fr-monthly{ font-family:'Space Mono', monospace; font-weight:700; font-size:15px; color:var(--sage); }
-  .founder-row .fr-daily{ font-size:10.5px; color:var(--ink-soft); margin-top:2px; }
+  .person-name{ font-size:15px; font-weight:700; }
+  .person-days{ font-size:11px; color:var(--ink-soft); margin-top:2px; }
+  .person-nums{ text-align:left; }
+  .person-monthly{ font-family:'Space Mono', monospace; font-weight:700; font-size:16px; color:var(--sage); }
+  .person-daily{ font-size:10.5px; color:var(--ink-soft); margin-top:2px; }
+  .person-actions{ display:flex; gap:8px; margin-top:12px; }
 
   .footnote{
     max-width:640px;
@@ -784,6 +789,7 @@
     <div class="tab" data-tab="customers" data-i18n="tab_customers">الزبائن والديون</div>
     <div class="tab" data-tab="orders" data-i18n="tab_orders">طلبات الزبائن</div>
     <div class="tab" data-tab="finance">📊 الأداء المالي</div>
+    <div class="tab" data-tab="operations">🧑‍💼 التشغيل</div>
   </div>
 
   <div class="page">
@@ -1293,22 +1299,27 @@
         </div>
       </div>
 
-      <div class="card">
-        <p class="card-title"><span class="quill">👑</span> رحلة المؤسس والمساعدين (رمزي — بلا خصم)</p>
-        <p style="font-size:11px; color:var(--ink-soft); margin:-8px 0 12px; line-height:1.7;">
-          نظام تجريبي شخصي: كل يوم عمل يزيد نقطة أقدمية واحدة لا تنتهي ولا تتصفر. الراتب اليومي = نقاط الأقدمية، والراتب الشهري = الراتب اليومي × 28. هذا حساب رمزي تحفيزي فقط، ولا يُخصم من أرباح المحل الفعلية.
-        </p>
-        <div id="fi-founder-list"></div>
-        <div style="display:flex; gap:10px; margin-top:14px; padding-top:12px; border-top:1px dashed var(--line);">
-          <input type="text" id="fi-helper-name" placeholder="اسم المساعد" style="flex:2;">
-          <input type="date" id="fi-helper-date" style="flex:1;">
-          <button class="mini-btn sage" id="fi-helper-add" style="flex:1;">+ إضافة</button>
-        </div>
-      </div>
-
       <p class="card-title" style="padding:0 2px;"><span class="quill">📖</span> سجل المصاريف والمداخيل اليدوية</p>
       <div class="ledger" id="fi-ledger"></div>
       <div class="empty-state" id="fi-empty">لا توجد مصاريف أو مداخيل يدوية مسجلة بعد.</div>
+    </div>
+
+    <!-- ============ تبويب: التشغيل (حضور وأقدمية رمزية) ============ -->
+    <div class="tab-panel" id="panel-operations">
+      <p class="footnote" style="margin:0 0 16px; padding:0;">
+        سجل يدوي للحضور: اضغط "تسجيل حضور اليوم" لكل شخص يوم عمله فعليًا. عدد أيام العمل يتراكم ولا يتصفر أبدًا. الراتب اليومي = عدد أيام العمل التراكمي، والراتب الشهري = الراتب اليومي × 28. حساب رمزي تحفيزي بحت، لا يُخصم من أرباح المحل الفعلية.
+      </p>
+
+      <div class="card">
+        <p class="card-title"><span class="quill">✒</span> إضافة شخص جديد</p>
+        <div class="form-grid">
+          <input type="text" id="op-person-name" placeholder="الاسم (مثلاً: أنا / المؤسس، أو اسم المساعد)" class="full">
+          <button class="add-btn" id="op-person-add">+ إضافة إلى التشغيل</button>
+        </div>
+      </div>
+
+      <div id="op-person-list"></div>
+      <div class="empty-state" id="op-empty">لا يوجد أي شخص مسجل بعد — أضف نفسك أولاً.</div>
     </div>
 
   </div>
@@ -3287,72 +3298,83 @@
   });
 
   /* =========================================================
-     رحلة المؤسس والمساعدين (رمزي بحت — لا يخصم من الأرباح)
+     التشغيل: حضور يدوي وأقدمية تراكمية رمزية (بلا خصم من الأرباح)
+     state.founderTeam يخزن الآن profil لكل شخص: { id, name, attendance:[ '2026-07-19', ... ] }
   ========================================================= */
-  const founderListEl = document.getElementById('fi-founder-list');
-  const helperNameInput = document.getElementById('fi-helper-name');
-  const helperDateInput = document.getElementById('fi-helper-date');
-  const helperAddBtn = document.getElementById('fi-helper-add');
-
-  function seniorityDays(startDateStr){
-    const start = new Date(startDateStr); start.setHours(0,0,0,0);
-    const now = new Date(); now.setHours(0,0,0,0);
-    return Math.max(0, Math.floor((now - start) / 86400000));
-  }
+  const opListEl = document.getElementById('op-person-list');
+  const opEmptyEl = document.getElementById('op-empty');
+  const opNameInput = document.getElementById('op-person-name');
+  const opAddBtn = document.getElementById('op-person-add');
 
   function renderFounderTeam(){
-    founderListEl.innerHTML = '';
+    const people = state.founderTeam || [];
+    opListEl.innerHTML = '';
+    opEmptyEl.classList.toggle('hide', people.length > 0);
 
-    const founderDays = seniorityDays(SHOP_OPENING_DATE);
-    const founderRow = document.createElement('div');
-    founderRow.className = 'founder-row';
-    founderRow.innerHTML = `
-      <div>
-        <div class="fr-name">👑 المؤسس</div>
-        <div class="fr-role">منذ افتتاح المحل — ${new Date(SHOP_OPENING_DATE).toLocaleDateString('ar-DZ')} · ${founderDays} يوم أقدمية</div>
-      </div>
-      <div class="fr-nums">
-        <div class="fr-monthly">${fmt(founderDays*28)} دج/شهريًا</div>
-        <div class="fr-daily">${fmt(founderDays)} دج/يوميًا</div>
-      </div>
-    `;
-    founderListEl.appendChild(founderRow);
+    people.forEach(person => {
+      const attendance = person.attendance || [];
+      const days = attendance.length;
+      const todayStr = todayISO();
+      const workedToday = attendance.includes(todayStr);
+      const lastDay = attendance.length ? attendance.slice().sort().slice(-1)[0] : null;
 
-    (state.founderTeam || []).forEach(person => {
-      const days = seniorityDays(person.startDate);
-      const row = document.createElement('div');
-      row.className = 'founder-row';
-      row.innerHTML = `
-        <div>
-          <div class="fr-name">${escapeHtml(person.name)}</div>
-          <div class="fr-role">منذ ${new Date(person.startDate).toLocaleDateString('ar-DZ')} · ${days} يوم أقدمية</div>
-        </div>
-        <div class="fr-nums" style="display:flex; align-items:center; gap:8px;">
+      const card = document.createElement('div');
+      card.className = 'person-card';
+      card.innerHTML = `
+        <div class="person-head">
           <div>
-            <div class="fr-monthly">${fmt(days*28)} دج/شهريًا</div>
-            <div class="fr-daily">${fmt(days)} دج/يوميًا</div>
+            <div class="person-name">${escapeHtml(person.name)}</div>
+            <div class="person-days">${days} يوم عمل تراكمي${lastDay ? ' · آخر حضور: ' + new Date(lastDay).toLocaleDateString('ar-DZ') : ''}</div>
           </div>
-          <button class="ev-del" data-action="del-helper" data-id="${person.id}" aria-label="حذف">×</button>
+          <div class="person-nums">
+            <div class="person-monthly">${fmt(days*28)} دج/شهريًا</div>
+            <div class="person-daily">${fmt(days)} دج/يوميًا</div>
+          </div>
+        </div>
+        <div class="person-actions">
+          <button class="mini-btn ${workedToday ? '' : 'sage'}" data-action="toggle-attendance" data-id="${person.id}" style="flex:2;">
+            ${workedToday ? '✓ تم تسجيل حضور اليوم' : '✓ تسجيل حضور اليوم'}
+          </button>
+          <button class="ev-del" data-action="del-person" data-id="${person.id}" aria-label="حذف">×</button>
         </div>
       `;
-      founderListEl.appendChild(row);
+      opListEl.appendChild(card);
     });
   }
 
-  founderListEl.addEventListener('click', async (e) => {
-    const btn = e.target.closest('[data-action="del-helper"]'); if(!btn) return;
-    state.founderTeam = state.founderTeam.filter(p => p.id !== btn.dataset.id);
-    await saveKey(KEYS.founderTeam, state.founderTeam);
-    renderFounderTeam();
+  opListEl.addEventListener('click', async (e) => {
+    const delBtn = e.target.closest('[data-action="del-person"]');
+    if(delBtn){
+      if(!confirm('حذف هذا الشخص وكل سجل حضوره؟ لا يمكن التراجع.')) return;
+      state.founderTeam = state.founderTeam.filter(p => p.id !== delBtn.dataset.id);
+      await saveKey(KEYS.founderTeam, state.founderTeam);
+      renderFounderTeam();
+      return;
+    }
+    const attBtn = e.target.closest('[data-action="toggle-attendance"]');
+    if(attBtn){
+      const idx = state.founderTeam.findIndex(p => p.id === attBtn.dataset.id);
+      if(idx === -1) return;
+      const todayStr = todayISO();
+      if(!state.founderTeam[idx].attendance) state.founderTeam[idx].attendance = [];
+      const already = state.founderTeam[idx].attendance.includes(todayStr);
+      if(already){
+        if(!confirm('إلغاء تسجيل حضور اليوم لهذا الشخص؟')) return;
+        state.founderTeam[idx].attendance = state.founderTeam[idx].attendance.filter(d => d !== todayStr);
+      } else {
+        state.founderTeam[idx].attendance.push(todayStr);
+      }
+      await saveKey(KEYS.founderTeam, state.founderTeam);
+      renderFounderTeam();
+    }
   });
 
-  helperAddBtn.addEventListener('click', async () => {
-    const name = helperNameInput.value.trim();
-    const startDate = helperDateInput.value;
-    if(!name || !startDate) return;
-    state.founderTeam.push({ id: uid(), name, startDate: new Date(startDate).toISOString() });
+  opAddBtn.addEventListener('click', async () => {
+    const name = opNameInput.value.trim();
+    if(!name) return;
+    state.founderTeam.push({ id: uid(), name, attendance: [] });
     await saveKey(KEYS.founderTeam, state.founderTeam);
-    helperNameInput.value = ''; helperDateInput.value = '';
+    opNameInput.value = '';
     renderFounderTeam();
   });
 
