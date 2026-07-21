@@ -264,6 +264,8 @@
     color:var(--accent-on-dark);
     border-color:var(--ink-accent);
   }
+  .demo-btn.watch{ border-color:rgba(156,59,52,0.4); color:var(--rose); }
+  .demo-btn.watch.selected{ background:var(--rose); color:#fff; border-color:var(--rose); }
 
   .toggle-row{
     display:flex;
@@ -1032,6 +1034,33 @@
             <button type="button" class="demo-btn" data-value="returning">قديم</button>
           </div>
         </div>
+
+        <div style="margin-top:12px; padding-top:10px; border-top:1px dashed var(--line);">
+          <label for="sl-cust-input" style="margin-bottom:6px;">ربط بزبون (اختياري — سهّل بها المرات القادمة)</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="sl-cust-input" list="customer-datalist" placeholder="اكتب رقم # أو اسم الزبون" style="flex:1;">
+            <button type="button" class="mini-btn" id="sl-cust-new-toggle" style="flex:0 0 auto; white-space:nowrap;">+ زبون جديد</button>
+          </div>
+          <div id="sl-cust-status" style="font-size:11.5px; margin-top:5px;"></div>
+          <div class="flexy-form" id="sl-cust-new-form">
+            <input type="text" id="sl-cust-new-name" placeholder="اسم الزبون الجديد" style="flex:1;">
+            <input type="text" id="sl-cust-new-phone" placeholder="رقم الهاتف (اختياري)" style="flex:1;">
+            <button type="button" class="mini-btn sage" id="sl-cust-new-save" style="width:100%;">✓ تسجيل الزبون وربطه بهذي العملية</button>
+          </div>
+        </div>
+
+        <div style="margin-top:12px; padding-top:10px; border-top:1px dashed var(--line);">
+          <div class="demo-group" data-group="sl-pay-mode">
+            <span class="demo-label">الدفع:</span>
+            <button type="button" class="demo-btn selected" data-value="cash">نقدًا كاملاً</button>
+            <button type="button" class="demo-btn" data-value="credit">دفع جزئي / آجل</button>
+          </div>
+          <div class="flexy-form" id="sl-credit-form">
+            <input type="number" min="0" step="1" id="sl-paid-now" placeholder="المبلغ المدفوع الآن (دج) — اتركه 0 إذا آجل بالكامل">
+            <div style="width:100%; font-size:11px; color:var(--ink-soft);" id="sl-remainder-note"></div>
+          </div>
+        </div>
+
         <div class="toggle-row" style="margin-top:10px;">
           <input type="checkbox" id="sl-cart-print-toggle" checked>
           <label for="sl-cart-print-toggle" style="margin:0;color:inherit;">🖨️ طباعة فاتورة A5 عند إتمام البيع</label>
@@ -1077,7 +1106,7 @@
         <p class="card-title"><span class="quill">✒</span> <span data-i18n="cu_add_title">إضافة زبون جديد</span></p>
         <div class="form-grid">
           <div>
-            <label for="cu-name" data-i18n="cu_name_lbl">اسم الزبون</label>
+            <label for="cu-name" data-i18n="cu_name_lbl">اسم الزبون (اختياري — إذا لا تعرفه اتركه فارغًا)</label>
             <input type="text" id="cu-name" placeholder="الاسم" data-i18n-ph="cu_name_ph">
           </div>
           <div>
@@ -1087,6 +1116,19 @@
           <div class="full">
             <label for="cu-debt-init" data-i18n="cu_debt_init_lbl">دين ابتدائي (دج، اتركه 0 إذا لا يوجد)</label>
             <input type="number" id="cu-debt-init" min="0" placeholder="0">
+          </div>
+          <div class="full">
+            <label>وصف الزبون (اختياري — اضغط لتحديد وصف أو أكثر)</label>
+            <div class="demo-group" data-group="cu-desc-tags" data-multi="1">
+              <button type="button" class="demo-btn" data-value="loyal">وفي</button>
+              <button type="button" class="demo-btn" data-value="special">مميز</button>
+              <button type="button" class="demo-btn" data-value="supportive">داعم</button>
+              <button type="button" class="demo-btn watch" data-value="watch">⚠️ يحتاج متابعة</button>
+            </div>
+          </div>
+          <div class="full">
+            <label for="cu-notes">ملاحظات إضافية (اختياري)</label>
+            <textarea id="cu-notes" placeholder="مثلاً: حاول السرقة بتاريخ... أو أي تفاصيل تحب تسجلها"></textarea>
           </div>
           <div class="full">
             <div class="demo-group" data-group="cu-demo-gender">
@@ -1342,6 +1384,7 @@
 
   <!-- ============ منطقة الطباعة (مخفية إلا عند الطباعة) ============ -->
   <div id="print-area" class="print-area"></div>
+  <datalist id="customer-datalist"></datalist>
 
 <script>
   const KEYS = {
@@ -1353,10 +1396,11 @@
     expenses: 'plume-blanche-expenses',
     otherIncome: 'plume-blanche-other-income',
     founderTeam: 'plume-blanche-founder-team',
+    customerCounter: 'plume-blanche-customer-counter',
   };
 
   let storageAvailable = true;
-  let state = { stock: [], sales: [], customers: [], orders: [], flexy: [], expenses: [], otherIncome: [], founderTeam: [] };
+  let state = { stock: [], sales: [], customers: [], orders: [], flexy: [], expenses: [], otherIncome: [], founderTeam: [], customerCounter: 0 };
   const SHOP_OPENING_DATE = '2025-09-11';
 
   const DEFAULT_FLEXY_OPERATORS = [
@@ -1965,7 +2009,8 @@
     state.flexy.forEach(f => {
       const low = f.balance <= f.threshold;
       const margin = f.totalFace > 0 ? ((f.totalFace - f.totalCost) / f.totalFace * 100) : 0;
-      const profitRealized = (f.totalSold || 0) * (margin / 100);
+      const totalCommissionAllTime = (f.history || []).filter(h => h.type === 'sale').reduce((s,h) => s + (h.commission || 0), 0);
+      const profitRealized = (f.totalSold || 0) * (margin / 100) + totalCommissionAllTime;
       const card = document.createElement('div');
       card.className = 'flexy-card';
 
@@ -1982,6 +2027,19 @@
         formHtml = `
           <div class="flexy-form show" style="flex-direction:column; align-items:stretch;">
             <input type="number" min="0" step="1" class="fx-sale-amt" placeholder="المبلغ المباع للزبون (دج)">
+            <input type="number" min="0" step="1" class="fx-commission" placeholder="عمولة/رسوم تحويل إضافية (دج) — اختياري">
+            <div style="width:100%;">
+              <div style="display:flex; gap:8px;">
+                <input type="text" class="fx-cust-input" list="customer-datalist" placeholder="ربط بزبون: رقم # أو الاسم (اختياري)" style="flex:1;">
+                <button type="button" class="mini-btn fx-cust-new-toggle" data-id="${f.id}" style="flex:0 0 auto; white-space:nowrap;">+ زبون جديد</button>
+              </div>
+              <div class="fx-cust-status" style="font-size:11px; margin-top:4px;"></div>
+              <div class="flexy-form fx-cust-new-form" style="margin-top:8px;">
+                <input type="text" class="fx-cust-new-name" placeholder="اسم الزبون الجديد" style="flex:1;">
+                <input type="text" class="fx-cust-new-phone" placeholder="رقم الهاتف (اختياري)" style="flex:1;">
+                <button type="button" class="mini-btn sage fx-cust-new-save" data-id="${f.id}" style="width:100%;">✓ تسجيل الزبون وربطه</button>
+              </div>
+            </div>
             <div class="demo-group" data-group="fx-demo-gender-${f.id}">
               <span class="demo-label">الجنس:</span>
               <button type="button" class="demo-btn" data-value="male">ذكر</button>
@@ -1998,6 +2056,12 @@
               <button type="button" class="demo-btn" data-value="new">جديد</button>
               <button type="button" class="demo-btn" data-value="returning">قديم</button>
             </div>
+            <div class="demo-group">
+              <span class="demo-label">الدفع:</span>
+              <button type="button" class="demo-btn fx-pay-btn selected" data-value="cash">نقدًا كاملاً</button>
+              <button type="button" class="demo-btn fx-pay-btn" data-value="credit">دفع جزئي / آجل</button>
+            </div>
+            <input type="number" min="0" step="1" class="fx-paid-now" placeholder="المبلغ المدفوع الآن (دج)" style="display:none;">
             <div style="display:flex; gap:8px;">
               <button class="mini-btn rose" data-action="save-sale" data-id="${f.id}">✓ تسجيل البيع</button>
               <button class="mini-btn" data-action="close" data-id="${f.id}">إلغاء</button>
@@ -2029,7 +2093,8 @@
       const periodFace = periodHist.filter(h => h.type === 'refill').reduce((s,h) => s + h.amount, 0);
       const periodCost = periodHist.filter(h => h.type === 'refill').reduce((s,h) => s + (h.cost || 0), 0);
       const periodSold = periodHist.filter(h => h.type === 'sale').reduce((s,h) => s + h.amount, 0);
-      const periodProfit = periodSold * (margin / 100);
+      const periodCommission = periodHist.filter(h => h.type === 'sale').reduce((s,h) => s + (h.commission || 0), 0);
+      const periodProfit = periodSold * (margin / 100) + periodCommission;
       const periodLabel = flexyPeriod === 'day' ? 'اليوم' : (flexyPeriod === 'month' ? 'آخر 30 يومًا' : 'الإجمالي الكلي');
 
       card.innerHTML = `
@@ -2071,12 +2136,30 @@
 
   flexyList.addEventListener('input', (e) => {
     const search = e.target.closest('.fx-hist-search');
-    if(!search) return;
-    flexySearch[search.dataset.id] = search.value;
-    renderFlexy();
-    // إعادة التركيز على خانة البحث بعد إعادة الرسم
-    const el = document.querySelector(`.fx-hist-search[data-id="${search.dataset.id}"]`);
-    if(el){ el.focus(); el.selectionStart = el.selectionEnd = el.value.length; }
+    if(search){
+      flexySearch[search.dataset.id] = search.value;
+      renderFlexy();
+      // إعادة التركيز على خانة البحث بعد إعادة الرسم
+      const el = document.querySelector(`.fx-hist-search[data-id="${search.dataset.id}"]`);
+      if(el){ el.focus(); el.selectionStart = el.selectionEnd = el.value.length; }
+      return;
+    }
+    const custInput = e.target.closest('.fx-cust-input');
+    if(custInput){
+      const card = custInput.closest('.flexy-card');
+      const statusEl = card.querySelector('.fx-cust-status');
+      const q = custInput.value.trim();
+      if(!q){ statusEl.textContent = ''; return; }
+      const found = findCustomerByQuery(q);
+      if(found){
+        statusEl.textContent = `✓ مرتبط بـ #${found.customerNumber}${found.name ? ' · ' + found.name : ''}`;
+        statusEl.style.color = 'var(--sage)';
+      } else {
+        statusEl.textContent = 'لم يُعثر على زبون بهذا الرقم أو الاسم — سجّله كزبون جديد بالأسفل.';
+        statusEl.style.color = 'var(--rose)';
+      }
+      return;
+    }
   });
 
   flexyList.addEventListener('click', async (e) => {
@@ -2085,12 +2168,45 @@
       document.getElementById('fx-hist-' + toggle.dataset.id).classList.toggle('show');
       return;
     }
+    const custNewToggle = e.target.closest('.fx-cust-new-toggle');
+    if(custNewToggle){
+      const card = custNewToggle.closest('.flexy-card');
+      card.querySelector('.fx-cust-new-form').classList.toggle('show');
+      return;
+    }
+    const custNewSave = e.target.closest('.fx-cust-new-save');
+    if(custNewSave){
+      const card = custNewSave.closest('.flexy-card');
+      const nameInput = card.querySelector('.fx-cust-new-name');
+      const phoneInput = card.querySelector('.fx-cust-new-phone');
+      const name = nameInput.value.trim();
+      const phone = phoneInput.value.trim();
+      const customerNumber = await nextCustomerNumber();
+      state.customers.push({
+        id: uid(), customerNumber, name, phone, debt: 0,
+        description: '', notes: '', tags: [], history: [],
+        custGender: null, custAge: null, custType: 'new'
+      });
+      await saveKey(KEYS.customers, state.customers);
+      const custInput = card.querySelector('.fx-cust-input');
+      custInput.value = `#${customerNumber}${name ? ' ' + name : ''}`;
+      custInput.dispatchEvent(new Event('input', { bubbles: true }));
+      nameInput.value = ''; phoneInput.value = '';
+      card.querySelector('.fx-cust-new-form').classList.remove('show');
+      renderCustomers();
+      return;
+    }
     const demoBtn = e.target.closest('.demo-btn');
     if(demoBtn){
       const group = demoBtn.closest('.demo-group');
       const already = demoBtn.classList.contains('selected');
       group.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('selected'));
       if(!already) demoBtn.classList.add('selected');
+      if(demoBtn.classList.contains('fx-pay-btn')){
+        const card = demoBtn.closest('.flexy-card');
+        const paidInput = card.querySelector('.fx-paid-now');
+        if(paidInput) paidInput.style.display = (demoBtn.dataset.value === 'credit') ? '' : 'none';
+      }
       return;
     }
     const trigger = e.target.closest('[data-action]');
@@ -2119,13 +2235,44 @@
     } else if(action === 'save-sale'){
       const amt = Number(card.querySelector('.fx-sale-amt').value) || 0;
       if(amt <= 0) return;
+      const commission = Number(card.querySelector('.fx-commission')?.value) || 0;
+      const custQuery = card.querySelector('.fx-cust-input')?.value.trim() || '';
+      const linkedCustomer = custQuery ? findCustomerByQuery(custQuery) : null;
+      const payBtn = card.querySelector('.fx-pay-btn.selected');
+      const payMode = payBtn ? payBtn.dataset.value : 'cash';
+
+      if(payMode === 'credit' && !linkedCustomer){
+        alert('لتأجيل الدفع لازم تربط العملية بزبون موجود (اكتب رقمه #) أو تسجّله كزبون جديد أولًا.');
+        return;
+      }
+
+      const grandTotal = amt + commission;
+      const paidNow = payMode === 'credit' ? (Number(card.querySelector('.fx-paid-now')?.value) || 0) : grandTotal;
+      const remainder = payMode === 'credit' ? Math.max(0, grandTotal - paidNow) : 0;
+
       const custGender = getDemoValue(`fx-demo-gender-${id}`);
       const custAge = getDemoValue(`fx-demo-age-${id}`);
       const custType = getDemoValue(`fx-demo-type-${id}`);
+      const customerNumber = linkedCustomer ? linkedCustomer.customerNumber : null;
+
       state.flexy[idx].balance = Math.max(0, state.flexy[idx].balance - amt);
       state.flexy[idx].totalSold = (state.flexy[idx].totalSold || 0) + amt;
       state.flexy[idx].history = state.flexy[idx].history || [];
-      state.flexy[idx].history.push({ type:'sale', amount: amt, date: new Date().toISOString(), custGender, custAge, custType });
+      state.flexy[idx].history.push({ type:'sale', amount: amt, commission, date: new Date().toISOString(), custGender, custAge, custType, customerNumber });
+
+      if(remainder > 0 && linkedCustomer){
+        const cIdx = state.customers.findIndex(c => c.id === linkedCustomer.id);
+        if(cIdx !== -1){
+          state.customers[cIdx].debt += remainder;
+          if(!state.customers[cIdx].history) state.customers[cIdx].history = [];
+          state.customers[cIdx].history.push({
+            type: 'debt', amount: remainder, date: new Date().toISOString(),
+            note: paidNow > 0 ? `فليكسي آجل — دفع ${fmt(paidNow)} من ${fmt(grandTotal)} دج` : 'فليكسي آجل بالكامل'
+          });
+          await saveKey(KEYS.customers, state.customers);
+          renderCustomers();
+        }
+      }
     } else if(action === 'save-threshold'){
       const thr = Number(card.querySelector('.fx-threshold').value);
       state.flexy[idx].threshold = isNaN(thr) ? state.flexy[idx].threshold : thr;
@@ -2377,6 +2524,62 @@
   const cartClearBtn = document.getElementById('sl-cart-clear');
   const cartCompleteBtn = document.getElementById('sl-cart-complete');
 
+  const slCustInput = document.getElementById('sl-cust-input');
+  const slCustStatus = document.getElementById('sl-cust-status');
+  const slCustNewToggle = document.getElementById('sl-cust-new-toggle');
+  const slCustNewForm = document.getElementById('sl-cust-new-form');
+  const slCustNewName = document.getElementById('sl-cust-new-name');
+  const slCustNewPhone = document.getElementById('sl-cust-new-phone');
+  const slCustNewSave = document.getElementById('sl-cust-new-save');
+  const slPayModeGroup = document.querySelector('[data-group="sl-pay-mode"]');
+  const slCreditForm = document.getElementById('sl-credit-form');
+  const slPaidNow = document.getElementById('sl-paid-now');
+  const slRemainderNote = document.getElementById('sl-remainder-note');
+
+  function updateSlCustStatus(){
+    const q = slCustInput.value.trim();
+    if(!q){ slCustStatus.textContent = ''; return; }
+    const found = findCustomerByQuery(q);
+    if(found){
+      slCustStatus.textContent = `✓ مرتبط بـ #${found.customerNumber}${found.name ? ' · ' + found.name : ''}`;
+      slCustStatus.style.color = 'var(--sage)';
+    } else {
+      slCustStatus.textContent = 'لم يُعثر على زبون بهذا الرقم أو الاسم — تقدر تسجّله كزبون جديد بالأسفل.';
+      slCustStatus.style.color = 'var(--rose)';
+    }
+  }
+  slCustInput.addEventListener('input', updateSlCustStatus);
+
+  slCustNewToggle.addEventListener('click', () => {
+    slCustNewForm.classList.toggle('show');
+  });
+
+  slCustNewSave.addEventListener('click', async () => {
+    const name = slCustNewName.value.trim();
+    const phone = slCustNewPhone.value.trim();
+    const customerNumber = await nextCustomerNumber();
+    state.customers.push({
+      id: uid(), customerNumber, name, phone, debt: 0,
+      description: '', notes: '', tags: [], history: [],
+      custGender: null, custAge: null, custType: 'new'
+    });
+    await saveKey(KEYS.customers, state.customers);
+    slCustInput.value = `#${customerNumber}${name ? ' ' + name : ''}`;
+    slCustNewName.value = ''; slCustNewPhone.value = '';
+    slCustNewForm.classList.remove('show');
+    updateSlCustStatus();
+    renderCustomers();
+  });
+
+  if(slPayModeGroup){
+    slPayModeGroup.addEventListener('click', (e) => {
+      const btn = e.target.closest('.demo-btn'); if(!btn) return;
+      const isCredit = btn.dataset.value === 'credit';
+      slCreditForm.classList.toggle('show', isCredit);
+      if(!isCredit) slPaidNow.value = '';
+    });
+  }
+
   function renderCart(){
     cartListEl.innerHTML = '';
     cartEmptyEl.classList.toggle('hide', cart.length > 0);
@@ -2477,14 +2680,28 @@
 
   cartCompleteBtn.addEventListener('click', async () => {
     if(cart.length === 0) return;
+
+    const total = cart.reduce((s,l) => s + l.unitPrice*l.qty, 0);
+    const payMode = getDemoValue('sl-pay-mode') || 'cash';
+    const custQuery = slCustInput.value.trim();
+    const linkedCustomer = custQuery ? findCustomerByQuery(custQuery) : null;
+
+    if(payMode === 'credit' && !linkedCustomer){
+      alert('لتأجيل الدفع لازم تربط العملية بزبون موجود (اكتب رقمه #) أو تسجّله كزبون جديد أولًا.');
+      return;
+    }
+
+    const paidNow = payMode === 'credit' ? (Number(slPaidNow.value) || 0) : total;
+    const remainder = payMode === 'credit' ? Math.max(0, total - paidNow) : 0;
+
     const groupId = uid();
     const now = new Date().toISOString();
     const shouldPrint = document.getElementById('sl-cart-print-toggle').checked;
     const cartSnapshot = cart.map(l => ({ ...l }));
-    const total = cartSnapshot.reduce((s,l) => s + l.unitPrice*l.qty, 0);
     const custGender = getDemoValue('sl-demo-gender');
     const custAge = getDemoValue('sl-demo-age');
     const custType = getDemoValue('sl-demo-type');
+    const customerNumber = linkedCustomer ? linkedCustomer.customerNumber : null;
 
     cart.forEach(line => {
       const profit = line.costPrice !== null ? (line.unitPrice - line.costPrice) * line.qty : 0;
@@ -2492,7 +2709,7 @@
         id: uid(), date: now, itemName: line.name, category: line.category,
         qty: line.qty, costPrice: line.costPrice, unitPrice: line.unitPrice,
         total: line.qty*line.unitPrice, profit, stockId: line.stockId || null, groupId,
-        custGender, custAge, custType
+        custGender, custAge, custType, customerNumber
       };
       state.sales.push(sale);
       if(line.stockId){
@@ -2505,10 +2722,32 @@
     await saveKey(KEYS.stock, state.stock);
     renderStock();
 
+    if(remainder > 0 && linkedCustomer){
+      const cIdx = state.customers.findIndex(c => c.id === linkedCustomer.id);
+      if(cIdx !== -1){
+        state.customers[cIdx].debt += remainder;
+        if(!state.customers[cIdx].history) state.customers[cIdx].history = [];
+        state.customers[cIdx].history.push({
+          type: 'debt', amount: remainder, date: now,
+          note: paidNow > 0 ? `بيع آجل — دفع ${fmt(paidNow)} من ${fmt(total)} دج` : 'بيع آجل بالكامل'
+        });
+        await saveKey(KEYS.customers, state.customers);
+      }
+    }
+
     cart = [];
     renderCart();
     renderSales();
+    renderCustomers();
     resetDemoGroup('sl-demo-gender'); resetDemoGroup('sl-demo-age'); resetDemoGroup('sl-demo-type');
+    resetDemoGroup('sl-pay-mode');
+    slPayModeGroup?.querySelector('[data-value="cash"]')?.classList.add('selected');
+    slCreditForm.classList.remove('show');
+    slPaidNow.value = '';
+    slCustInput.value = '';
+    slCustStatus.textContent = '';
+    slCustNewForm.classList.remove('show');
+    slCustNewName.value = ''; slCustNewPhone.value = '';
 
     if(shouldPrint) printInvoice(cartSnapshot, total, groupId, now);
   });
@@ -2546,12 +2785,13 @@
   });
 
   /* =========================================================
-     الزبائن والديون
+     الزبائن والديون (بروفايل داخلي دائم)
   ========================================================= */
   const cu = {
     name: document.getElementById('cu-name'),
     phone: document.getElementById('cu-phone'),
     debtInit: document.getElementById('cu-debt-init'),
+    notes: document.getElementById('cu-notes'),
     add: document.getElementById('cu-add'),
     search: document.getElementById('cu-search'),
     list: document.getElementById('cu-list'),
@@ -2560,38 +2800,155 @@
     debtTotal: document.getElementById('cu-debt'),
   };
 
+  async function nextCustomerNumber(){
+    state.customerCounter = (state.customerCounter || 0) + 1;
+    await saveKey(KEYS.customerCounter, state.customerCounter);
+    return state.customerCounter;
+  }
+
+  function findCustomerByNumber(num){
+    return state.customers.find(c => c.customerNumber === Number(num));
+  }
+
+  function findCustomerByQuery(query){
+    if(!query) return null;
+    const q = String(query).trim();
+    if(!q) return null;
+    const numMatch = q.match(/^#?\s*(\d+)/);
+    if(numMatch){
+      const byNum = findCustomerByNumber(numMatch[1]);
+      if(byNum) return byNum;
+    }
+    const lower = q.toLowerCase();
+    return state.customers.find(c => c.name && c.name.toLowerCase() === lower) ||
+           state.customers.find(c => c.name && c.name.toLowerCase().includes(lower)) || null;
+  }
+
+  function renderCustomerDatalist(){
+    const dl = document.getElementById('customer-datalist');
+    if(!dl) return;
+    dl.innerHTML = state.customers
+      .slice().sort((a,b) => b.customerNumber - a.customerNumber)
+      .map(c => `<option value="#${c.customerNumber}${c.name ? ' ' + escapeHtml(c.name) : ''}"></option>`)
+      .join('');
+  }
+
+  function getCustomerStats(customerNumber){
+    const purchases = state.sales.filter(s => s.customerNumber === customerNumber);
+    const groups = {};
+    purchases.forEach(s => {
+      const key = s.groupId || s.id;
+      if(!groups[key]) groups[key] = { date: s.date, total: 0, qty: 0 };
+      groups[key].total += s.total;
+      groups[key].qty += s.qty;
+    });
+    const groupList = Object.values(groups);
+    const purchaseCount = groupList.length;
+    const totalSpent = groupList.reduce((s,g) => s + g.total, 0);
+    const totalProducts = groupList.reduce((s,g) => s + g.qty, 0);
+    const avgPurchase = purchaseCount > 0 ? totalSpent / purchaseCount : 0;
+    const largestPurchase = purchaseCount > 0 ? Math.max(...groupList.map(g => g.total)) : 0;
+    const dates = purchases.map(s => new Date(s.date));
+    const firstDate = dates.length ? new Date(Math.min(...dates)) : null;
+    const lastDate = dates.length ? new Date(Math.max(...dates)) : null;
+    const catCounts = {};
+    purchases.forEach(s => { if(s.category) catCounts[s.category] = (catCounts[s.category]||0) + s.total; });
+    const favoriteCategory = Object.entries(catCounts).sort((a,b) => b[1]-a[1])[0];
+
+    return { purchases, purchaseCount, totalSpent, totalProducts, avgPurchase, largestPurchase, firstDate, lastDate, favoriteCategory: favoriteCategory ? favoriteCategory[0] : null };
+  }
+
+  function getCustomerFlexyHistory(customerNumber){
+    const events = [];
+    (state.flexy || []).forEach(op => {
+      (op.history || []).forEach(h => {
+        if(h.type === 'sale' && h.customerNumber === customerNumber){
+          events.push({ opName: op.name, amount: h.amount, commission: h.commission || 0, date: h.date });
+        }
+      });
+    });
+    return events.sort((a,b) => new Date(b.date) - new Date(a.date));
+  }
+
   function renderCustomers(){
+    renderCustomerDatalist();
     const search = cu.search.value.trim().toLowerCase();
-    const filtered = state.customers.filter(c => !search || c.name.toLowerCase().includes(search));
+    const filtered = state.customers.filter(c => {
+      if(!search) return true;
+      return (c.name||'').toLowerCase().includes(search) ||
+             String(c.customerNumber).includes(search) ||
+             (c.description||'').toLowerCase().includes(search);
+    });
 
     cu.list.innerHTML = '';
     cu.empty.classList.toggle('hide', state.customers.length > 0);
     cu.empty.textContent = state.customers.length === 0 ? 'لا يوجد زبائن مسجلون بعد.' : (filtered.length === 0 ? 'لا توجد نتائج مطابقة.' : '');
     if(state.customers.length > 0 && filtered.length === 0) cu.empty.classList.remove('hide');
 
-    filtered.slice().sort((a,b) => b.debt - a.debt).forEach(c => {
+    filtered.slice().sort((a,b) => b.customerNumber - a.customerNumber).forEach(c => {
       const card = document.createElement('div');
       card.className = 'customer-card';
       const hist = (c.history || []).slice().reverse();
+      const stats = getCustomerStats(c.customerNumber);
+      const flexyEvents = getCustomerFlexyHistory(c.customerNumber);
+      const tags = c.tags || [];
+      const tagBadges = tags.map(t => `<span class="cat-tag" style="${t==='watch' ? 'background:rgba(156,59,52,0.12); color:var(--rose);' : ''}">${escapeHtml(CUSTOMER_TAG_LABELS[t] || t)}</span>`).join(' ');
+
       card.innerHTML = `
         <div class="customer-head">
           <div>
-            <div class="customer-name">${escapeHtml(c.name)}</div>
+            <div class="customer-name">#${c.customerNumber} ${c.name ? '· ' + escapeHtml(c.name) : ''}</div>
+            ${c.description ? `<div class="customer-phone" style="direction:rtl; text-align:right; font-family:'Cairo',sans-serif;">${escapeHtml(c.description)}</div>` : ''}
             ${c.phone ? `<div class="customer-phone">${escapeHtml(c.phone)}</div>` : ''}
+            ${tagBadges ? `<div style="margin-top:4px;">${tagBadges}</div>` : ''}
           </div>
           <div style="text-align:left;">
             <div class="debt-pill ${c.debt > 0 ? 'owe' : 'clear'}">${fmt(c.debt)} دج</div>
             <button class="ev-del" data-action="del-customer" data-id="${c.id}" aria-label="حذف" style="margin-top:2px;">×</button>
           </div>
         </div>
+
+        <div class="breakdown-row" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); font-size:11.5px;">
+          <div class="breakdown-head"><span class="name">عدد المشتريات</span><span class="val">${stats.purchaseCount}</span></div>
+          <div class="breakdown-head"><span class="name">إجمالي الإنفاق</span><span class="val">${fmt(stats.totalSpent)} دج</span></div>
+          <div class="breakdown-head"><span class="name">متوسط الفاتورة</span><span class="val">${fmt(stats.avgPurchase)} دج</span></div>
+          <div class="breakdown-head"><span class="name">أكبر فاتورة</span><span class="val">${fmt(stats.largestPurchase)} دج</span></div>
+          ${stats.lastDate ? `<div class="breakdown-head"><span class="name">آخر زيارة</span><span class="val">${stats.lastDate.toLocaleDateString('ar-DZ')}</span></div>` : ''}
+          ${stats.favoriteCategory ? `<div class="breakdown-head"><span class="name">الفئة المفضلة</span><span class="val">${escapeHtml(stats.favoriteCategory)}</span></div>` : ''}
+        </div>
+
         <div class="customer-actions">
           <input type="number" class="amt-input" id="amt-${c.id}" placeholder="مبلغ" min="0">
           <button class="mini-btn rose" data-action="add-debt" data-id="${c.id}">+ دين جديد</button>
           <button class="mini-btn sage" data-action="pay-debt" data-id="${c.id}">− تسديد</button>
         </div>
-        ${hist.length ? `<div class="history-toggle" data-action="toggle-hist" data-id="${c.id}">عرض السجل (${hist.length})</div>` : ''}
+        <div style="display:flex; gap:14px; margin-top:8px;">
+          ${hist.length ? `<span class="history-toggle" data-action="toggle-hist" data-id="${c.id}">سجل الديون (${hist.length})</span>` : ''}
+          ${stats.purchaseCount ? `<span class="history-toggle" data-action="toggle-purchases" data-id="${c.id}">سجل المشتريات (${stats.purchaseCount})</span>` : ''}
+          ${flexyEvents.length ? `<span class="history-toggle" data-action="toggle-flexy" data-id="${c.id}">عمليات الفليكسي (${flexyEvents.length})</span>` : ''}
+        </div>
         <div class="history-list" id="hist-${c.id}">
-          ${hist.map(h => `<div class="history-item"><span>${new Date(h.date).toLocaleDateString('ar-DZ')}</span><span>${h.type === 'debt' ? '+' : '−'} ${fmt(h.amount)} دج</span></div>`).join('')}
+          ${hist.map(h => `<div class="history-item"><span>${new Date(h.date).toLocaleDateString('ar-DZ')}${h.note ? ' · ' + escapeHtml(h.note) : ''}</span><span>${h.type === 'debt' ? '+' : '−'} ${fmt(h.amount)} دج</span></div>`).join('')}
+        </div>
+        <div class="history-list" id="flexy-cu-${c.id}">
+          ${flexyEvents.map(ev => `<div class="history-item"><span>${new Date(ev.date).toLocaleDateString('ar-DZ')} — ${escapeHtml(ev.opName)}</span><span>${fmt(ev.amount + ev.commission)} دج${ev.commission ? ' (منها عمولة ' + fmt(ev.commission) + ')' : ''}</span></div>`).join('')}
+        </div>
+        <div class="history-list" id="purchases-${c.id}">
+          ${(() => {
+            const byGroup = {};
+            stats.purchases.forEach(s => {
+              const key = s.groupId || s.id;
+              if(!byGroup[key]) byGroup[key] = { date: s.date, items: [], total: 0 };
+              byGroup[key].items.push(`${s.itemName} ×${s.qty}`);
+              byGroup[key].total += s.total;
+            });
+            return Object.values(byGroup).sort((a,b) => new Date(b.date)-new Date(a.date)).map(g =>
+              `<div class="history-item" style="flex-direction:column; align-items:flex-start; gap:2px;">
+                <span>${new Date(g.date).toLocaleDateString('ar-DZ')} ${new Date(g.date).toLocaleTimeString('ar-DZ',{hour:'2-digit',minute:'2-digit'})} — ${fmt(g.total)} دج</span>
+                <span style="color:var(--ink-soft); font-size:10.5px;">${g.items.join('، ')}</span>
+              </div>`
+            ).join('');
+          })()}
         </div>
       `;
       cu.list.appendChild(card);
@@ -2603,18 +2960,20 @@
 
   cu.add.addEventListener('click', async () => {
     const name = cu.name.value.trim();
-    if(!name) return;
     const initDebt = cu.debtInit.value === '' ? 0 : Number(cu.debtInit.value);
+    const customerNumber = await nextCustomerNumber();
     state.customers.push({
-      id: uid(), name, phone: cu.phone.value.trim(), debt: initDebt,
+      id: uid(), customerNumber, name, phone: cu.phone.value.trim(), debt: initDebt,
+      description: '', notes: cu.notes.value.trim(), tags: getDemoValues('cu-desc-tags'),
       history: initDebt > 0 ? [{ type:'debt', amount: initDebt, date: new Date().toISOString() }] : [],
       custGender: getDemoValue('cu-demo-gender'), custAge: getDemoValue('cu-demo-age'), custType: getDemoValue('cu-demo-type')
     });
     await saveKey(KEYS.customers, state.customers);
-    cu.name.value=''; cu.phone.value=''; cu.debtInit.value='';
-    resetDemoGroup('cu-demo-gender'); resetDemoGroup('cu-demo-age'); resetDemoGroup('cu-demo-type');
+    cu.name.value=''; cu.phone.value=''; cu.debtInit.value=''; cu.notes.value='';
+    resetDemoGroup('cu-demo-gender'); resetDemoGroup('cu-demo-age'); resetDemoGroup('cu-demo-type'); resetDemoGroup('cu-desc-tags');
     renderCustomers();
     if(typeof renderAudienceReport === 'function') renderAudienceReport();
+    alert(`تم تسجيل الزبون برقم تعريف دائم: #${customerNumber}`);
   });
 
   cu.search.addEventListener('input', renderCustomers);
@@ -2623,6 +2982,16 @@
     const toggle = e.target.closest('[data-action="toggle-hist"]');
     if(toggle){
       document.getElementById('hist-' + toggle.dataset.id).classList.toggle('show');
+      return;
+    }
+    const purchToggle = e.target.closest('[data-action="toggle-purchases"]');
+    if(purchToggle){
+      document.getElementById('purchases-' + purchToggle.dataset.id).classList.toggle('show');
+      return;
+    }
+    const flexyToggle = e.target.closest('[data-action="toggle-flexy"]');
+    if(flexyToggle){
+      document.getElementById('flexy-cu-' + flexyToggle.dataset.id).classList.toggle('show');
       return;
     }
     const btn = e.target.closest('button'); if(!btn) return;
@@ -2921,11 +3290,13 @@
   function wireDemoGroup(groupName){
     const group = document.querySelector(`[data-group="${groupName}"]`);
     if(!group) return;
+    const isMulti = group.dataset.multi === '1';
     group.addEventListener('click', (e) => {
       const btn = e.target.closest('.demo-btn'); if(!btn) return;
       const alreadySelected = btn.classList.contains('selected');
-      group.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('selected'));
+      if(!isMulti) group.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('selected'));
       if(!alreadySelected) btn.classList.add('selected');
+      else if(isMulti) btn.classList.remove('selected');
     });
   }
 
@@ -2936,15 +3307,23 @@
     return sel ? sel.dataset.value : null;
   }
 
+  function getDemoValues(groupName){
+    const group = document.querySelector(`[data-group="${groupName}"]`);
+    if(!group) return [];
+    return Array.from(group.querySelectorAll('.demo-btn.selected')).map(b => b.dataset.value);
+  }
+
   function resetDemoGroup(groupName){
     const group = document.querySelector(`[data-group="${groupName}"]`);
     if(!group) return;
     group.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('selected'));
   }
 
-  ['sl-demo-gender','sl-demo-age','sl-demo-type',
+  ['sl-demo-gender','sl-demo-age','sl-demo-type','sl-pay-mode',
    'or-demo-gender','or-demo-age','or-demo-type',
-   'cu-demo-gender','cu-demo-age','cu-demo-type'].forEach(wireDemoGroup);
+   'cu-demo-gender','cu-demo-age','cu-demo-type','cu-desc-tags'].forEach(wireDemoGroup);
+
+  const CUSTOMER_TAG_LABELS = { loyal: 'وفي', special: 'مميز', supportive: 'داعم', watch: '⚠️ يحتاج متابعة' };
 
   const DEMO_LABELS = {
     gender: { male: 'ذكور', female: 'إناث' },
@@ -3075,16 +3454,16 @@
   }
 
   function computeFlexyProfitInPeriod(start){
-    let totalSold = 0, totalFace = 0, totalCost = 0;
+    let totalSold = 0, totalFace = 0, totalCost = 0, totalCommission = 0;
     (state.flexy || []).forEach(op => {
       (op.history || []).forEach(h => {
         if(start && new Date(h.date) < start) return;
-        if(h.type === 'sale') totalSold += h.amount;
+        if(h.type === 'sale'){ totalSold += h.amount; totalCommission += (h.commission || 0); }
         else if(h.type === 'refill'){ totalFace += h.amount; totalCost += (h.cost || 0); }
       });
     });
     const marginRate = totalFace > 0 ? (totalFace - totalCost) / totalFace : 0;
-    return totalSold * marginRate;
+    return totalSold * marginRate + totalCommission;
   }
 
   function renderFinance(){
@@ -3207,9 +3586,9 @@
         if(h.type !== 'sale') return;
         const b = buckets.find(x => x.key === monthKey(h.date));
         if(!b) return;
-        // نسبة ربح تقريبية إجمالية للمتعامل تُطبَّق على البيع بنفس الشهر
+        // نسبة ربح تقريبية إجمالية للمتعامل تُطبَّق على البيع بنفس الشهر + العمولات الإضافية كربح صافٍ
         const marginRate = op.totalFace > 0 ? ((op.totalFace - op.totalCost) / op.totalFace) : 0;
-        b.value += h.amount * marginRate;
+        b.value += h.amount * marginRate + (h.commission || 0);
       });
     });
     (state.expenses || []).forEach(e => {
@@ -3335,12 +3714,24 @@
           <button class="mini-btn ${workedToday ? '' : 'sage'}" data-action="toggle-attendance" data-id="${person.id}" style="flex:2;">
             ${workedToday ? '✓ تم تسجيل حضور اليوم' : '✓ تسجيل حضور اليوم'}
           </button>
+          <span class="history-toggle" data-action="toggle-backdate" data-id="${person.id}">📅 إضافة تواريخ سابقة</span>
           <button class="ev-del" data-action="del-person" data-id="${person.id}" aria-label="حذف">×</button>
+        </div>
+        <div class="flexy-form" id="op-backdate-${person.id}">
+          <div style="width:100%; font-size:11px; color:var(--ink-soft); margin-bottom:6px;">إضافة يوم واحد سابق:</div>
+          <input type="date" class="op-single-date" style="flex:1;">
+          <button class="mini-btn sage" data-action="add-single-date" data-id="${person.id}">+ إضافة اليوم</button>
+          <div style="width:100%; font-size:11px; color:var(--ink-soft); margin:10px 0 6px;">أو إضافة فترة كاملة (من - إلى)، لتسريع نقل سجل المذكرة:</div>
+          <input type="date" class="op-range-from" style="flex:1;" placeholder="من">
+          <input type="date" class="op-range-to" style="flex:1;" placeholder="إلى">
+          <button class="mini-btn sage" data-action="add-range" data-id="${person.id}" style="width:100%;">+ إضافة كل أيام الفترة</button>
         </div>
       `;
       opListEl.appendChild(card);
     });
   }
+
+  let opBackdateOpenId = null;
 
   opListEl.addEventListener('click', async (e) => {
     const delBtn = e.target.closest('[data-action="del-person"]');
@@ -3366,6 +3757,61 @@
       }
       await saveKey(KEYS.founderTeam, state.founderTeam);
       renderFounderTeam();
+      return;
+    }
+
+    const toggleBackdateBtn = e.target.closest('[data-action="toggle-backdate"]');
+    if(toggleBackdateBtn){
+      const panel = document.getElementById('op-backdate-' + toggleBackdateBtn.dataset.id);
+      const isOpen = panel.classList.contains('show');
+      document.querySelectorAll('[id^="op-backdate-"]').forEach(p => p.classList.remove('show'));
+      if(!isOpen) panel.classList.add('show');
+      return;
+    }
+
+    const singleBtn = e.target.closest('[data-action="add-single-date"]');
+    if(singleBtn){
+      const idx = state.founderTeam.findIndex(p => p.id === singleBtn.dataset.id);
+      if(idx === -1) return;
+      const input = document.querySelector(`#op-backdate-${singleBtn.dataset.id} .op-single-date`);
+      const dateVal = input.value;
+      if(!dateVal) return;
+      if(!state.founderTeam[idx].attendance) state.founderTeam[idx].attendance = [];
+      if(!state.founderTeam[idx].attendance.includes(dateVal)){
+        state.founderTeam[idx].attendance.push(dateVal);
+        await saveKey(KEYS.founderTeam, state.founderTeam);
+      }
+      opBackdateOpenId = singleBtn.dataset.id;
+      renderFounderTeam();
+      document.getElementById('op-backdate-' + opBackdateOpenId)?.classList.add('show');
+      return;
+    }
+
+    const rangeBtn = e.target.closest('[data-action="add-range"]');
+    if(rangeBtn){
+      const idx = state.founderTeam.findIndex(p => p.id === rangeBtn.dataset.id);
+      if(idx === -1) return;
+      const fromInput = document.querySelector(`#op-backdate-${rangeBtn.dataset.id} .op-range-from`);
+      const toInput = document.querySelector(`#op-backdate-${rangeBtn.dataset.id} .op-range-to`);
+      const fromVal = fromInput.value, toVal = toInput.value;
+      if(!fromVal || !toVal) return;
+      const from = new Date(fromVal), to = new Date(toVal);
+      if(from > to){ alert('تاريخ "من" يجب أن يكون قبل تاريخ "إلى".'); return; }
+      const daysCount = Math.round((to - from) / 86400000) + 1;
+      if(daysCount > 500 && !confirm(`هذه الفترة تحتوي ${daysCount} يومًا. متابعة؟`)) return;
+
+      if(!state.founderTeam[idx].attendance) state.founderTeam[idx].attendance = [];
+      const set = new Set(state.founderTeam[idx].attendance);
+      const cursor = new Date(from);
+      while(cursor <= to){
+        set.add(cursor.toISOString().slice(0,10));
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      state.founderTeam[idx].attendance = Array.from(set);
+      await saveKey(KEYS.founderTeam, state.founderTeam);
+      opBackdateOpenId = rangeBtn.dataset.id;
+      renderFounderTeam();
+      document.getElementById('op-backdate-' + opBackdateOpenId)?.classList.add('show');
     }
   });
 
@@ -3405,6 +3851,7 @@
     state.expenses = await loadKey(KEYS.expenses);
     state.otherIncome = await loadKey(KEYS.otherIncome);
     state.founderTeam = await loadKey(KEYS.founderTeam);
+    { const rawCounter = await loadKey(KEYS.customerCounter); state.customerCounter = (typeof rawCounter === 'number') ? rawCounter : (state.customers.reduce((m,c) => Math.max(m, c.customerNumber||0), 0)); }
     ensureFlexyDefaults();
     await saveKey(KEYS.flexy, state.flexy);
     or.date.value = todayISO();
