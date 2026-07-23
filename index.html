@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -959,6 +960,13 @@
       <div class="card">
         <p class="card-title"><span class="quill">👥</span> جمهور المحل</p>
         <p style="font-size:11px; color:var(--ink-soft); margin:-8px 0 12px;">إحصائيات مبنية على البيانات الاختيارية التي تسجلها مع البيع، الطلبات، والزبائن.</p>
+        <div class="period-bar" id="sl-audience-period-bar">
+          <div class="period-btn" data-period="day">اليوم</div>
+          <div class="period-btn" data-period="week">الأسبوع</div>
+          <div class="period-btn active" data-period="month">الشهر</div>
+          <div class="period-btn" data-period="year">السنة</div>
+          <div class="period-btn" data-period="all">الكل</div>
+        </div>
         <div id="sl-audience-gender" class="breakdown-row"></div>
         <div id="sl-audience-age" class="breakdown-row" style="margin-top:14px;"></div>
         <div id="sl-audience-type" class="breakdown-row" style="margin-top:14px;"></div>
@@ -1146,6 +1154,12 @@
               <span class="demo-label">الزبون:</span>
               <button type="button" class="demo-btn" data-value="new">جديد</button>
               <button type="button" class="demo-btn" data-value="returning">قديم</button>
+            </div>
+          </div>
+          <div class="full">
+            <div class="toggle-row">
+              <input type="checkbox" id="cu-is-self">
+              <label for="cu-is-self">🧍 هذا أنا (سحب شخصي) — تُستثنى من عدد الزبائن وإجمالي ديونهم</label>
             </div>
           </div>
           <button class="add-btn" id="cu-add" data-i18n="cu_add_btn">+ إضافة زبون</button>
@@ -1681,10 +1695,37 @@
   const scannerMsgEl = document.getElementById('scanner-msg');
   const scannerCloseBtn = document.getElementById('scanner-close');
   let html5QrInstance = null;
+  let scannerRefocusTimer = null;
 
   function showScannerMsg(text, success){
     scannerMsgEl.textContent = text;
     scannerMsgEl.style.color = success ? 'var(--sage)' : 'var(--rose)';
+  }
+
+  // يحاول فرض التركيز التلقائي المستمر (continuous autofocus) مباشرة على مسار الفيديو.
+  // بعض هواتف أندرويد تتجاهل خيار focusMode داخل getUserMedia الأولي، وتحتاج تطبيقه
+  // مباشرة على الـ MediaStreamTrack بعد بدء تشغيل الكاميرا فعليًا — ونعيد المحاولة
+  // بضع مرات لأن بعض الأجهزة تحتاج وقت حتى تصبح الخاصية متاحة على الـ track.
+  function applyContinuousAutofocus(){
+    try{
+      const videoEl = document.querySelector('#scanner-reader video');
+      const track = videoEl && videoEl.srcObject ? videoEl.srcObject.getVideoTracks()[0] : null;
+      if(!track) return;
+      const tryFocus = () => {
+        if(!track || track.readyState !== 'live') return;
+        const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+        if(capabilities.focusMode && capabilities.focusMode.includes('continuous')){
+          track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+        }
+      };
+      tryFocus();
+      let attempts = 0;
+      scannerRefocusTimer = setInterval(() => {
+        attempts++;
+        if(attempts >= 4 || !html5QrInstance){ clearInterval(scannerRefocusTimer); scannerRefocusTimer = null; return; }
+        tryFocus();
+      }, 1200);
+    } catch(e){ /* بعض المتصفحات لا تدعم getCapabilities/applyConstraints — تجاهل بأمان */ }
   }
 
   async function openScanner(onDetected){
@@ -1698,10 +1739,27 @@
     let detected = false;
 
     html5QrInstance = new Html5Qrcode('scanner-reader');
+
+    // إعدادات كاميرا محسّنة خصيصًا لثبات التركيز التلقائي وجودة القراءة على أندرويد:
+    // دقة أعلى ومعدل إطارات ثابت يعطي محرك التركيز صورة أوضح ليشتغل عليها،
+    // مع طلب focusMode continuous صراحة (يدعمه Chrome على أندرويد).
+    const cameraConfig = { facingMode: 'environment' };
+    const scanConfig = {
+      fps: 12,
+      qrbox: { width: 250, height: 120 },
+      videoConstraints: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        frameRate: { ideal: 30, max: 30 },
+        advanced: [{ focusMode: 'continuous' }]
+      }
+    };
+
     try{
       await html5QrInstance.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 120 } },
+        cameraConfig,
+        scanConfig,
         (decodedText) => {
           if(detected) return;
           detected = true;
@@ -1710,6 +1768,7 @@
         },
         () => { /* تجاهل أخطاء المسح المستمرة أثناء البحث */ }
       );
+      applyContinuousAutofocus();
     } catch(err){
       console.error('Scanner start failed', err);
       showScannerMsg('تعذّر تشغيل الكاميرا — تحقق من إذن الوصول للكاميرا.', false);
@@ -1717,6 +1776,7 @@
   }
 
   function closeScanner(){
+    if(scannerRefocusTimer){ clearInterval(scannerRefocusTimer); scannerRefocusTimer = null; }
     if(html5QrInstance){
       html5QrInstance.stop().then(() => html5QrInstance.clear()).catch(() => {});
       html5QrInstance = null;
@@ -2360,6 +2420,14 @@
     renderSales();
   });
 
+  const audiencePeriodBar = document.getElementById('sl-audience-period-bar');
+  audiencePeriodBar.addEventListener('click', (e) => {
+    const btn = e.target.closest('.period-btn'); if(!btn) return;
+    audiencePeriod = btn.dataset.period;
+    audiencePeriodBar.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b === btn));
+    renderAudienceReport();
+  });
+
   function periodStart(period){
     const now = new Date();
     const start = new Date(now);
@@ -2792,6 +2860,7 @@
     phone: document.getElementById('cu-phone'),
     debtInit: document.getElementById('cu-debt-init'),
     notes: document.getElementById('cu-notes'),
+    isSelf: document.getElementById('cu-is-self'),
     add: document.getElementById('cu-add'),
     search: document.getElementById('cu-search'),
     list: document.getElementById('cu-list'),
@@ -2799,6 +2868,7 @@
     count: document.getElementById('cu-count'),
     debtTotal: document.getElementById('cu-debt'),
   };
+  let cuEditId = null;
 
   async function nextCustomerNumber(){
     state.customerCounter = (state.customerCounter || 0) + 1;
@@ -2897,16 +2967,58 @@
       card.innerHTML = `
         <div class="customer-head">
           <div>
-            <div class="customer-name">#${c.customerNumber} ${c.name ? '· ' + escapeHtml(c.name) : ''}</div>
+            <div class="customer-name">#${c.customerNumber} ${c.name ? '· ' + escapeHtml(c.name) : ''} ${c.isSelf ? '<span style="font-size:11px; font-weight:600; color:var(--ink-accent-dim);">🧍 سحب شخصي</span>' : ''}</div>
             ${c.description ? `<div class="customer-phone" style="direction:rtl; text-align:right; font-family:'Cairo',sans-serif;">${escapeHtml(c.description)}</div>` : ''}
             ${c.phone ? `<div class="customer-phone">${escapeHtml(c.phone)}</div>` : ''}
+            ${c.notes ? `<div class="customer-phone" style="white-space:pre-wrap;">📝 ${escapeHtml(c.notes)}</div>` : ''}
             ${tagBadges ? `<div style="margin-top:4px;">${tagBadges}</div>` : ''}
           </div>
           <div style="text-align:left;">
             <div class="debt-pill ${c.debt > 0 ? 'owe' : 'clear'}">${fmt(c.debt)} دج</div>
-            <button class="ev-del" data-action="del-customer" data-id="${c.id}" aria-label="حذف" style="margin-top:2px;">×</button>
+            <div style="display:flex; gap:6px; margin-top:2px;">
+              <button class="ev-del" data-action="edit-customer" data-id="${c.id}" aria-label="تعديل" title="تعديل بيانات الزبون">✎</button>
+              <button class="ev-del" data-action="del-customer" data-id="${c.id}" aria-label="حذف">×</button>
+            </div>
           </div>
         </div>
+
+        ${cuEditId === c.id ? `
+        <div class="flexy-form show" style="flex-direction:column; align-items:stretch; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);">
+          <input type="text" class="cu-edit-name" placeholder="اسم الزبون" value="${escapeHtml(c.name || '')}">
+          <input type="text" class="cu-edit-phone" placeholder="رقم الهاتف (اختياري)" value="${escapeHtml(c.phone || '')}">
+          <textarea class="cu-edit-notes" placeholder="ملاحظات إضافية (اختياري)" style="width:100%;">${escapeHtml(c.notes || '')}</textarea>
+          <div class="demo-group cu-edit-tags" data-multi="1">
+            <span class="demo-label">الوصف:</span>
+            <button type="button" class="demo-btn ${tags.includes('loyal') ? 'selected' : ''}" data-value="loyal">وفي</button>
+            <button type="button" class="demo-btn ${tags.includes('special') ? 'selected' : ''}" data-value="special">مميز</button>
+            <button type="button" class="demo-btn ${tags.includes('supportive') ? 'selected' : ''}" data-value="supportive">داعم</button>
+            <button type="button" class="demo-btn ${tags.includes('watch') ? 'selected' : ''}" data-value="watch">⚠️ يحتاج متابعة</button>
+          </div>
+          <div class="demo-group cu-edit-gender">
+            <span class="demo-label">الجنس:</span>
+            <button type="button" class="demo-btn ${c.custGender==='male' ? 'selected' : ''}" data-value="male">ذكر</button>
+            <button type="button" class="demo-btn ${c.custGender==='female' ? 'selected' : ''}" data-value="female">أنثى</button>
+          </div>
+          <div class="demo-group cu-edit-age">
+            <span class="demo-label">العمر:</span>
+            <button type="button" class="demo-btn ${c.custAge==='minor' ? 'selected' : ''}" data-value="minor">قاصر</button>
+            <button type="button" class="demo-btn ${c.custAge==='adult' ? 'selected' : ''}" data-value="adult">شاب/بالغ</button>
+            <button type="button" class="demo-btn ${c.custAge==='senior' ? 'selected' : ''}" data-value="senior">كبير السن</button>
+          </div>
+          <div class="demo-group cu-edit-type">
+            <span class="demo-label">الزبون:</span>
+            <button type="button" class="demo-btn ${c.custType==='new' ? 'selected' : ''}" data-value="new">جديد</button>
+            <button type="button" class="demo-btn ${c.custType==='returning' ? 'selected' : ''}" data-value="returning">قديم</button>
+          </div>
+          <div class="toggle-row">
+            <input type="checkbox" class="cu-edit-is-self" ${c.isSelf ? 'checked' : ''}>
+            <label>🧍 هذا أنا (سحب شخصي) — تُستثنى من عدد الزبائن وإجمالي ديونهم</label>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="mini-btn sage" data-action="save-edit-customer" data-id="${c.id}" style="flex:1;">✓ حفظ التعديلات</button>
+            <button class="mini-btn" data-action="cancel-edit-customer" data-id="${c.id}">إلغاء</button>
+          </div>
+        </div>` : ''}
 
         <div class="breakdown-row" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); font-size:11.5px;">
           <div class="breakdown-head"><span class="name">عدد المشتريات</span><span class="val">${stats.purchaseCount}</span></div>
@@ -2954,8 +3066,8 @@
       cu.list.appendChild(card);
     });
 
-    cu.count.textContent = state.customers.length;
-    cu.debtTotal.textContent = fmt(state.customers.reduce((s,c) => s + c.debt, 0));
+    cu.count.textContent = state.customers.filter(c => !c.isSelf).length;
+    cu.debtTotal.textContent = fmt(state.customers.filter(c => !c.isSelf).reduce((s,c) => s + c.debt, 0));
   }
 
   cu.add.addEventListener('click', async () => {
@@ -2965,11 +3077,12 @@
     state.customers.push({
       id: uid(), customerNumber, name, phone: cu.phone.value.trim(), debt: initDebt,
       description: '', notes: cu.notes.value.trim(), tags: getDemoValues('cu-desc-tags'),
+      isSelf: cu.isSelf.checked,
       history: initDebt > 0 ? [{ type:'debt', amount: initDebt, date: new Date().toISOString() }] : [],
       custGender: getDemoValue('cu-demo-gender'), custAge: getDemoValue('cu-demo-age'), custType: getDemoValue('cu-demo-type')
     });
     await saveKey(KEYS.customers, state.customers);
-    cu.name.value=''; cu.phone.value=''; cu.debtInit.value=''; cu.notes.value='';
+    cu.name.value=''; cu.phone.value=''; cu.debtInit.value=''; cu.notes.value=''; cu.isSelf.checked = false;
     resetDemoGroup('cu-demo-gender'); resetDemoGroup('cu-demo-age'); resetDemoGroup('cu-demo-type'); resetDemoGroup('cu-desc-tags');
     renderCustomers();
     if(typeof renderAudienceReport === 'function') renderAudienceReport();
@@ -2994,11 +3107,47 @@
       document.getElementById('flexy-cu-' + flexyToggle.dataset.id).classList.toggle('show');
       return;
     }
+    const demoBtn = e.target.closest('.customer-card .demo-btn');
+    if(demoBtn){
+      const group = demoBtn.closest('.demo-group');
+      const isMulti = group.classList.contains('cu-edit-tags');
+      const already = demoBtn.classList.contains('selected');
+      if(!isMulti) group.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('selected'));
+      if(!already) demoBtn.classList.add('selected');
+      else if(isMulti) demoBtn.classList.remove('selected');
+      return;
+    }
     const btn = e.target.closest('button'); if(!btn) return;
     const id = btn.dataset.id;
     const idx = state.customers.findIndex(c => c.id === id);
     if(idx === -1) return;
     const action = btn.dataset.action;
+
+    if(action === 'edit-customer'){
+      cuEditId = cuEditId === id ? null : id;
+      renderCustomers();
+      return;
+    }
+    if(action === 'cancel-edit-customer'){
+      cuEditId = null;
+      renderCustomers();
+      return;
+    }
+    if(action === 'save-edit-customer'){
+      const card = btn.closest('.customer-card');
+      state.customers[idx].name = card.querySelector('.cu-edit-name').value.trim();
+      state.customers[idx].phone = card.querySelector('.cu-edit-phone').value.trim();
+      state.customers[idx].notes = card.querySelector('.cu-edit-notes').value.trim();
+      state.customers[idx].tags = Array.from(card.querySelectorAll('.cu-edit-tags .demo-btn.selected')).map(b => b.dataset.value);
+      state.customers[idx].custGender = card.querySelector('.cu-edit-gender .demo-btn.selected')?.dataset.value || null;
+      state.customers[idx].custAge = card.querySelector('.cu-edit-age .demo-btn.selected')?.dataset.value || null;
+      state.customers[idx].custType = card.querySelector('.cu-edit-type .demo-btn.selected')?.dataset.value || null;
+      state.customers[idx].isSelf = card.querySelector('.cu-edit-is-self').checked;
+      cuEditId = null;
+      await saveKey(KEYS.customers, state.customers);
+      renderCustomers();
+      return;
+    }
 
     if(action === 'del-customer'){
       state.customers.splice(idx,1);
@@ -3348,11 +3497,17 @@
     return total;
   }
 
+  let audiencePeriod = 'month';
+
   function renderAudienceReport(){
+    const start = audiencePeriod === 'all' ? null : periodStart(audiencePeriod);
+    const inPeriod = (dateStr) => !start || !dateStr || new Date(dateStr) >= start;
+
     // نُقلّص مبيعات نفس عملية البيع (groupId) لحدث واحد فقط، حتى لا نحسب سلة بـ3 أصناف كـ3 زبائن
     const seenGroups = new Set();
     const dedupedSales = [];
     state.sales.forEach(s => {
+      if(!inPeriod(s.date)) return;
       const key = s.groupId || s.id; // العمليات القديمة بلا groupId تُحسب فرادى كما كانت
       if(seenGroups.has(key)) return;
       seenGroups.add(key);
@@ -3362,18 +3517,44 @@
     const flexySaleEvents = [];
     (state.flexy || []).forEach(op => {
       (op.history || []).forEach(h => {
-        if(h.type === 'sale' && (h.custGender || h.custAge || h.custType)){
-          flexySaleEvents.push({ gender: h.custGender, age: h.custAge, type: h.custType });
+        if(h.type === 'sale' && inPeriod(h.date) && (h.custGender || h.custAge || h.custType || h.customerNumber)){
+          flexySaleEvents.push({ gender: h.custGender, age: h.custAge, type: h.custType, customerNumber: h.customerNumber || null, date: h.date });
         }
       });
     });
 
-    const allEvents = [
-      ...dedupedSales.map(s => ({ gender: s.custGender, age: s.custAge, type: s.custType })),
-      ...state.orders.map(o => ({ gender: o.custGender, age: o.custAge, type: o.custType })),
-      ...state.customers.map(c => ({ gender: c.custGender, age: c.custAge, type: c.custType })),
-      ...flexySaleEvents,
-    ];
+    // الزبون المرتبط برقم تعريف (customerNumber) يُحسب مرة واحدة فقط بغض النظر عن عدد عملياته —
+    // نأخذ له آخر بيانات ديموغرافية مسجلة. أما العمليات المجهولة (بدون رقم زبون، غالبًا بيانات
+    // قديمة قبل ميزة ربط الزبون) فتبقى تُحسب كل واحدة لحالها لأنه لا توجد طريقة لمعرفة هويتها.
+    const knownByCustomer = new Map();
+    const anonymousEvents = [];
+
+    function considerEvent(ev){
+      if(ev.customerNumber){
+        const existing = knownByCustomer.get(ev.customerNumber);
+        if(!existing || (ev.date && (!existing.date || new Date(ev.date) > new Date(existing.date)))){
+          knownByCustomer.set(ev.customerNumber, ev);
+        }
+      } else if(ev.gender || ev.age || ev.type){
+        anonymousEvents.push(ev);
+      }
+    }
+
+    dedupedSales.forEach(s => considerEvent({ gender: s.custGender, age: s.custAge, type: s.custType, customerNumber: s.customerNumber || null, date: s.date }));
+    flexySaleEvents.forEach(ev => considerEvent(ev));
+    state.orders.forEach(o => { if(inPeriod(o.date)) considerEvent({ gender: o.custGender, age: o.custAge, type: o.custType, customerNumber: null, date: o.date }); });
+    // بروفايل الزبون نفسه (بلا تاريخ عملية محدد) يُستخدم فقط عند عرض "الكل"، ولو ما عنده
+    // أي عملية بيع/فليكسي مسجّلة مرتبطة به بعد، وباستثناء "السحب الشخصي".
+    if(!start){
+      state.customers.forEach(c => {
+        if(c.isSelf) return;
+        if(!knownByCustomer.has(c.customerNumber) && (c.custGender || c.custAge || c.custType)){
+          knownByCustomer.set(c.customerNumber, { gender: c.custGender, age: c.custAge, type: c.custType, date: null });
+        }
+      });
+    }
+
+    const allEvents = [...knownByCustomer.values(), ...anonymousEvents];
 
     const genderCounts = { [DEMO_LABELS.gender.male]:0, [DEMO_LABELS.gender.female]:0 };
     const ageCounts = { [DEMO_LABELS.age.minor]:0, [DEMO_LABELS.age.adult]:0, [DEMO_LABELS.age.senior]:0 };
