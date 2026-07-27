@@ -792,6 +792,7 @@
     <div class="tab" data-tab="orders" data-i18n="tab_orders">طلبات الزبائن</div>
     <div class="tab" data-tab="finance">📊 الأداء المالي</div>
     <div class="tab" data-tab="operations">🧑‍💼 التشغيل</div>
+    <div class="tab" data-tab="lessons">📘 الدروس المستفادة</div>
   </div>
 
   <div class="page">
@@ -979,6 +980,7 @@
         <div id="sl-audience-gender" class="breakdown-row"></div>
         <div id="sl-audience-age" class="breakdown-row" style="margin-top:14px;"></div>
         <div id="sl-audience-type" class="breakdown-row" style="margin-top:14px;"></div>
+        <div id="sl-audience-area" class="breakdown-row" style="margin-top:14px;"></div>
         <p class="card-title" style="font-size:13px; margin:16px 0 6px;">🕐 التوافد حسب ساعة اليوم</p>
         <div class="trend-chart" id="sl-audience-hours" style="height:56px;"></div>
         <div id="sl-audience-hours-peak" style="font-size:12px; text-align:center; color:var(--ink-accent-dim); font-weight:600; margin-top:8px;"></div>
@@ -1134,6 +1136,11 @@
             <input type="text" id="cu-phone" placeholder="0555...">
           </div>
           <div class="full">
+            <label for="cu-area">المنطقة / الحي (اختياري)</label>
+            <input type="text" id="cu-area" list="cu-area-datalist" placeholder="مثلاً: شعبة العامر، حي 5 جويلية...">
+            <datalist id="cu-area-datalist"></datalist>
+          </div>
+          <div class="full">
             <label for="cu-debt-init" data-i18n="cu_debt_init_lbl">دين ابتدائي (دج، اتركه 0 إذا لا يوجد)</label>
             <input type="number" id="cu-debt-init" min="0" placeholder="0">
           </div>
@@ -1276,6 +1283,10 @@
         <button type="button" class="mini-btn" id="fi-period-next" style="padding:4px 10px;">التالية ▶</button>
       </div>
 
+      <div class="card" id="fi-milestone-card">
+        <div id="fi-milestone-content"></div>
+      </div>
+
       <div id="fi-perf-banner" class="perf-banner ok">جارِ الحساب...</div>
 
       <div class="summary">
@@ -1395,6 +1406,51 @@
       <div class="empty-state" id="op-empty">لا يوجد أي شخص مسجل بعد — أضف نفسك أولاً.</div>
     </div>
 
+    <!-- ============ تبويب: سجل الدروس المستفادة ============ -->
+    <div class="tab-panel" id="panel-lessons">
+      <p class="footnote" style="margin:0 0 16px; padding:0;">
+        هذا مو سجل خسائر — كل خطأ هنا يتحول لقاعدة عمل تمنع تكراره. المعرفة اللي اكتسبتها من هذي المواقف جزء من قيمة المشروع، حتى لو ما ظهرت بالميزانية.
+      </p>
+
+      <div class="card">
+        <p class="card-title"><span class="quill">✒</span> تسجيل درس جديد</p>
+        <div class="form-grid">
+          <div>
+            <label for="ls-date">التاريخ</label>
+            <input type="date" id="ls-date">
+          </div>
+          <div>
+            <label for="ls-category">النوع</label>
+            <select id="ls-category">
+              <option value="سرقة أو نصب">سرقة أو نصب</option>
+              <option value="مورد غير موثوق">مورد غير موثوق</option>
+              <option value="انتهاء صلاحية">انتهاء صلاحية</option>
+              <option value="سلعة ضعيفة الطلب">سلعة ضعيفة الطلب</option>
+              <option value="خطأ بتقدير الكمية">خطأ بتقدير الكمية</option>
+              <option value="جودة رديئة">جودة رديئة</option>
+              <option value="أخرى">أخرى</option>
+            </select>
+          </div>
+          <div class="full">
+            <label for="ls-what">وش صار بالضبط</label>
+            <textarea id="ls-what" placeholder="مثلاً: اشتريت صنف من مورد جديد تبين غير موثوق..."></textarea>
+          </div>
+          <div class="full">
+            <label for="ls-lesson">الدرس / القاعدة الجديدة</label>
+            <textarea id="ls-lesson" placeholder="مثلاً: عدم التعامل معه مرة ثانية، أو التأكد من المصدر قبل الشراء..."></textarea>
+          </div>
+          <div>
+            <label for="ls-amount">خسارة تقريبية بالدج (اختياري)</label>
+            <input type="number" id="ls-amount" min="0" placeholder="0">
+          </div>
+          <button class="add-btn full" id="ls-add">+ تسجيل الدرس</button>
+        </div>
+      </div>
+
+      <div id="ls-list"></div>
+      <div class="empty-state" id="ls-empty">لا يوجد أي درس مسجّل بعد.</div>
+    </div>
+
   </div>
 
   <p class="footnote" data-i18n="footnote">
@@ -1428,10 +1484,12 @@
     otherIncome: 'plume-blanche-other-income',
     founderTeam: 'plume-blanche-founder-team',
     customerCounter: 'plume-blanche-customer-counter',
+    milestones: 'plume-blanche-milestones',
+    lessons: 'plume-blanche-lessons',
   };
 
   let storageAvailable = true;
-  let state = { stock: [], sales: [], customers: [], orders: [], flexy: [], expenses: [], otherIncome: [], founderTeam: [], customerCounter: 0 };
+  let state = { stock: [], sales: [], customers: [], orders: [], flexy: [], expenses: [], otherIncome: [], founderTeam: [], customerCounter: 0, milestones: {}, lessons: [] };
   const SHOP_OPENING_DATE = '2025-09-11';
 
   const DEFAULT_FLEXY_OPERATORS = [
@@ -2937,6 +2995,7 @@
   const cu = {
     name: document.getElementById('cu-name'),
     phone: document.getElementById('cu-phone'),
+    area: document.getElementById('cu-area'),
     debtInit: document.getElementById('cu-debt-init'),
     notes: document.getElementById('cu-notes'),
     isSelf: document.getElementById('cu-is-self'),
@@ -3019,8 +3078,16 @@
     return events.sort((a,b) => new Date(b.date) - new Date(a.date));
   }
 
+  function renderCustomerAreaDatalist(){
+    const dl = document.getElementById('cu-area-datalist');
+    if(!dl) return;
+    const areas = [...new Set(state.customers.map(c => (c.area || '').trim()).filter(Boolean))].sort();
+    dl.innerHTML = areas.map(a => `<option value="${escapeHtml(a)}"></option>`).join('');
+  }
+
   function renderCustomers(){
     renderCustomerDatalist();
+    renderCustomerAreaDatalist();
     const search = cu.search.value.trim().toLowerCase();
     const filtered = state.customers.filter(c => {
       if(!search) return true;
@@ -3049,6 +3116,7 @@
             <div class="customer-name">#${c.customerNumber} ${c.name ? '· ' + escapeHtml(c.name) : ''} ${c.isSelf ? '<span style="font-size:11px; font-weight:600; color:var(--ink-accent-dim);">🧍 سحب شخصي</span>' : ''}</div>
             ${c.description ? `<div class="customer-phone" style="direction:rtl; text-align:right; font-family:'Cairo',sans-serif;">${escapeHtml(c.description)}</div>` : ''}
             ${c.phone ? `<div class="customer-phone">${escapeHtml(c.phone)}</div>` : ''}
+            ${c.area ? `<div class="customer-phone" style="direction:rtl; text-align:right; font-family:'Cairo',sans-serif;">📍 ${escapeHtml(c.area)}</div>` : ''}
             ${c.notes ? `<div class="customer-phone" style="white-space:pre-wrap;">📝 ${escapeHtml(c.notes)}</div>` : ''}
             ${tagBadges ? `<div style="margin-top:4px;">${tagBadges}</div>` : ''}
           </div>
@@ -3065,6 +3133,7 @@
         <div class="flexy-form show" style="flex-direction:column; align-items:stretch; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);">
           <input type="text" class="cu-edit-name" placeholder="اسم الزبون" value="${escapeHtml(c.name || '')}">
           <input type="text" class="cu-edit-phone" placeholder="رقم الهاتف (اختياري)" value="${escapeHtml(c.phone || '')}">
+          <input type="text" class="cu-edit-area" list="cu-area-datalist" placeholder="المنطقة / الحي (اختياري)" value="${escapeHtml(c.area || '')}">
           <textarea class="cu-edit-notes" placeholder="ملاحظات إضافية (اختياري)" style="width:100%;">${escapeHtml(c.notes || '')}</textarea>
           <div class="demo-group cu-edit-tags" data-multi="1">
             <span class="demo-label">الوصف:</span>
@@ -3154,14 +3223,14 @@
     const initDebt = cu.debtInit.value === '' ? 0 : Number(cu.debtInit.value);
     const customerNumber = await nextCustomerNumber();
     state.customers.push({
-      id: uid(), customerNumber, name, phone: cu.phone.value.trim(), debt: initDebt,
+      id: uid(), customerNumber, name, phone: cu.phone.value.trim(), area: cu.area.value.trim(), debt: initDebt,
       description: '', notes: cu.notes.value.trim(), tags: getDemoValues('cu-desc-tags'),
       isSelf: cu.isSelf.checked,
       history: initDebt > 0 ? [{ type:'debt', amount: initDebt, date: new Date().toISOString() }] : [],
       custGender: getDemoValue('cu-demo-gender'), custAge: getDemoValue('cu-demo-age'), custType: getDemoValue('cu-demo-type')
     });
     await saveKey(KEYS.customers, state.customers);
-    cu.name.value=''; cu.phone.value=''; cu.debtInit.value=''; cu.notes.value=''; cu.isSelf.checked = false;
+    cu.name.value=''; cu.phone.value=''; cu.area.value=''; cu.debtInit.value=''; cu.notes.value=''; cu.isSelf.checked = false;
     resetDemoGroup('cu-demo-gender'); resetDemoGroup('cu-demo-age'); resetDemoGroup('cu-demo-type'); resetDemoGroup('cu-desc-tags');
     renderCustomers();
     if(typeof renderAudienceReport === 'function') renderAudienceReport();
@@ -3222,6 +3291,7 @@
       state.customers[idx].custAge = card.querySelector('.cu-edit-age .demo-btn.selected')?.dataset.value || null;
       state.customers[idx].custType = card.querySelector('.cu-edit-type .demo-btn.selected')?.dataset.value || null;
       state.customers[idx].isSelf = card.querySelector('.cu-edit-is-self').checked;
+      state.customers[idx].area = card.querySelector('.cu-edit-area').value.trim();
       cuEditId = null;
       await saveKey(KEYS.customers, state.customers);
       renderCustomers();
@@ -3653,6 +3723,16 @@
     const t2 = renderBreakdownField('sl-audience-age', ageCounts, 'حسب الفئة العمرية');
     const t3 = renderBreakdownField('sl-audience-type', typeCounts, 'زبائن جدد مقابل قدامى');
 
+    // توزيع المنطقة/الحي: مبني فقط على الزبائن المرتبطين برقم تعريف (customerNumber) خلال
+    // الفترة، لأن المنطقة بيانة محفوظة ببروفايل الزبون نفسه، مو بكل عملية بيع منفردة.
+    const areaCounts = {};
+    knownByCustomer.forEach((ev, customerNumber) => {
+      const c = state.customers.find(x => x.customerNumber === customerNumber);
+      const area = c && c.area ? c.area.trim() : '';
+      if(area) areaCounts[area] = (areaCounts[area] || 0) + 1;
+    });
+    const t4 = renderBreakdownField('sl-audience-area', areaCounts, 'حسب المنطقة / الحي');
+
     // توزيع عدد الزيارات (كل سلة بيع + كل عملية فليكسي) حسب ساعة اليوم — يعتمد على التوقيت
     // المحلي الفعلي لكل عملية، عشان يبيّن أوقات الذروة الحقيقية (زي وقت خروج التلاميذ من المدرسة).
     const hourCounts = new Array(24).fill(0);
@@ -3693,7 +3773,7 @@
     }
 
     const emptyEl = document.getElementById('sl-audience-empty');
-    if(emptyEl) emptyEl.classList.toggle('show', (t1+t2+t3) === 0);
+    if(emptyEl) emptyEl.classList.toggle('show', (t1+t2+t3+t4) === 0);
   }
 
   /* =========================================================
@@ -3782,7 +3862,46 @@
     return totalSold * marginRate + totalCommission;
   }
 
+  async function checkAndRenderInvestmentMilestone(){
+    const totalIncome = state.sales.reduce((s,x) => s + x.total, 0) + (state.otherIncome || []).reduce((s,x) => s + x.amount, 0);
+    const totalExpenses = (state.expenses || []).reduce((s,x) => s + x.amount, 0);
+    const cumulativeNet = totalIncome - totalExpenses;
+    const contentEl = document.getElementById('fi-milestone-content');
+    if(!contentEl) return;
+
+    // أول مرة يتجاوز فيها التراكم الكلي (منذ التأسيس) الصفر — نسجّل تاريخ هذا الإنجاز
+    // بشكل دائم، ولا نعيد كتابته أبدًا حتى لو رجع الرقم يتذبذب لاحقًا.
+    if(cumulativeNet > 0 && !state.milestones.investmentRecoveredDate){
+      state.milestones.investmentRecoveredDate = new Date().toISOString();
+      state.milestones.investmentRecoveredAmount = cumulativeNet;
+      await saveKey(KEYS.milestones, state.milestones);
+    }
+
+    if(state.milestones.investmentRecoveredDate){
+      const d = new Date(state.milestones.investmentRecoveredDate);
+      contentEl.innerHTML = `
+        <div style="text-align:center;">
+          <div style="font-size:26px;">🎉</div>
+          <div style="font-weight:700; font-size:14.5px; margin-top:4px;">تم استرداد كامل الاستثمار الأولي</div>
+          <div style="font-size:11.5px; color:var(--ink-soft); margin-top:4px;">تحقق بتاريخ ${d.toLocaleDateString('ar-DZ')} — المشروع رابح بالكامل منذ تأسيسه 🏆</div>
+          <div style="font-size:13px; font-weight:600; color:var(--sage); margin-top:8px;">صافي التراكم الحالي: ${fmt(cumulativeNet)} دج</div>
+        </div>`;
+    } else {
+      const progress = totalExpenses > 0 ? Math.max(0, Math.min(99, Math.round((totalIncome / totalExpenses) * 100))) : 0;
+      const remaining = Math.max(0, -cumulativeNet);
+      contentEl.innerHTML = `
+        <div>
+          <div style="font-weight:700; font-size:13.5px; text-align:center;">🏁 التحدي: استرداد الاستثمار الأولي</div>
+          <div style="background:var(--paper-2); border-radius:8px; height:10px; margin:10px 0 6px; overflow:hidden;">
+            <div style="background:var(--ink-accent); height:100%; width:${progress}%;"></div>
+          </div>
+          <div style="font-size:11.5px; color:var(--ink-soft); text-align:center;">${progress}% — تبقى ${fmt(remaining)} دج لاسترداد الاستثمار الأولي بالكامل منذ التأسيس</div>
+        </div>`;
+    }
+  }
+
   function renderFinance(){
+    checkAndRenderInvestmentMilestone();
     const start = financePeriodStart(financePeriod);
     const end = financePeriodEnd(financePeriod);
     const inPeriod = (dateStr) => {
@@ -4145,6 +4264,61 @@
     renderFounderTeam();
   });
 
+  /* =========================================================
+     سجل الدروس المستفادة: كل خطأ يتحول لقاعدة عمل، مو مجرد رقم خسارة
+  ========================================================= */
+  const lsListEl = document.getElementById('ls-list');
+  const lsEmptyEl = document.getElementById('ls-empty');
+  const lsDate = document.getElementById('ls-date');
+  const lsCategory = document.getElementById('ls-category');
+  const lsWhat = document.getElementById('ls-what');
+  const lsLesson = document.getElementById('ls-lesson');
+  const lsAmount = document.getElementById('ls-amount');
+  const lsAddBtn = document.getElementById('ls-add');
+
+  const LESSON_CATEGORY_ICON = {
+    'سرقة أو نصب': '🚨', 'مورد غير موثوق': '📦', 'انتهاء صلاحية': '⏳',
+    'سلعة ضعيفة الطلب': '📉', 'خطأ بتقدير الكمية': '🔢', 'جودة رديئة': '⚠️', 'أخرى': '📝'
+  };
+
+  function renderLessons(){
+    const items = (state.lessons || []).slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+    lsEmptyEl.classList.toggle('hide', items.length > 0);
+    lsListEl.innerHTML = items.map(l => `
+      <div class="card" style="padding:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div style="font-size:12px; color:var(--ink-soft);">📅 ${new Date(l.date).toLocaleDateString('ar-DZ')} · ${LESSON_CATEGORY_ICON[l.category] || '📝'} ${escapeHtml(l.category)}</div>
+          <button class="ev-del" data-action="del-lesson" data-id="${l.id}" aria-label="حذف">×</button>
+        </div>
+        ${l.what ? `<div style="font-size:13px; margin-top:8px;">${escapeHtml(l.what)}</div>` : ''}
+        ${l.lesson ? `<div style="font-size:13px; font-weight:600; color:var(--sage); margin-top:6px;">→ ${escapeHtml(l.lesson)}</div>` : ''}
+        ${l.amount ? `<div style="font-size:11.5px; color:var(--ink-soft); margin-top:6px;">خسارة تقريبية: ${fmt(l.amount)} دج</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  lsAddBtn.addEventListener('click', async () => {
+    const what = lsWhat.value.trim();
+    const lesson = lsLesson.value.trim();
+    if(!what && !lesson) return;
+    state.lessons.push({
+      id: uid(),
+      date: lsDate.value ? new Date(lsDate.value).toISOString() : new Date().toISOString(),
+      category: lsCategory.value, what, lesson,
+      amount: Number(lsAmount.value) || 0,
+    });
+    await saveKey(KEYS.lessons, state.lessons);
+    lsWhat.value = ''; lsLesson.value = ''; lsAmount.value = ''; lsDate.value = todayISO();
+    renderLessons();
+  });
+
+  lsListEl.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-action="del-lesson"]'); if(!btn) return;
+    state.lessons = state.lessons.filter(l => l.id !== btn.dataset.id);
+    await saveKey(KEYS.lessons, state.lessons);
+    renderLessons();
+  });
+
   function renderAllPanels(){
     renderStock();
     renderSales();
@@ -4154,6 +4328,7 @@
     renderAudienceReport();
     renderFinance();
     renderFounderTeam();
+    renderLessons();
   }
 
   /* =========================================================
@@ -4172,6 +4347,9 @@
     state.expenses = await loadKey(KEYS.expenses);
     state.otherIncome = await loadKey(KEYS.otherIncome);
     state.founderTeam = await loadKey(KEYS.founderTeam);
+    { const rawMilestones = await loadKey(KEYS.milestones); state.milestones = (rawMilestones && !Array.isArray(rawMilestones)) ? rawMilestones : {}; }
+    state.lessons = await loadKey(KEYS.lessons);
+    lsDate.value = todayISO();
     { const rawCounter = await loadKey(KEYS.customerCounter); state.customerCounter = (typeof rawCounter === 'number') ? rawCounter : (state.customers.reduce((m,c) => Math.max(m, c.customerNumber||0), 0)); }
     ensureFlexyDefaults();
     await saveKey(KEYS.flexy, state.flexy);
@@ -4189,6 +4367,8 @@
       listenKeyLive(KEYS.expenses, data => { state.expenses = data; renderFinance(); });
       listenKeyLive(KEYS.otherIncome, data => { state.otherIncome = data; renderFinance(); });
       listenKeyLive(KEYS.founderTeam, data => { state.founderTeam = data; renderFounderTeam(); });
+      listenKeyLive(KEYS.milestones, data => { state.milestones = (data && !Array.isArray(data)) ? data : {}; renderFinance(); });
+      listenKeyLive(KEYS.lessons, data => { state.lessons = data; renderLessons(); });
     }
   })();
 </script>
