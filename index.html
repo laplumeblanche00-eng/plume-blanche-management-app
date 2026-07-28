@@ -1185,7 +1185,20 @@
         </div>
       </div>
 
-      <input type="text" id="cu-search" placeholder="ابحث عن زبون..." style="margin-bottom:14px;" data-i18n-ph="cu_search_ph">
+      <div id="cu-top-customers"></div>
+
+      <input type="text" id="cu-search" placeholder="ابحث عن زبون..." style="margin-bottom:10px;" data-i18n-ph="cu_search_ph">
+
+      <div class="period-bar" id="cu-sort-bar" style="margin-bottom:10px;">
+        <div class="period-btn active" data-sort="recent">الأحدث</div>
+        <div class="period-btn" data-sort="spent">الأكثر شراءً</div>
+        <div class="period-btn" data-sort="debt">الأكثر دينًا</div>
+      </div>
+
+      <div class="toggle-row" style="margin-bottom:14px;">
+        <input type="checkbox" id="cu-repeat-only">
+        <label for="cu-repeat-only">🔁 إخفاء الزبائن اللي اشتروا مرة وحدة بس</label>
+      </div>
 
       <div id="cu-list"></div>
       <div class="empty-state" id="cu-empty" data-i18n="cu_empty">لا يوجد زبائن مسجلون بعد.</div>
@@ -3007,6 +3020,7 @@
     debtTotal: document.getElementById('cu-debt'),
   };
   let cuEditId = null;
+  let cuSortMode = 'recent';
 
   async function nextCustomerNumber(){
     state.customerCounter = (state.customerCounter || 0) + 1;
@@ -3085,15 +3099,56 @@
     dl.innerHTML = areas.map(a => `<option value="${escapeHtml(a)}"></option>`).join('');
   }
 
+  function renderTopCustomers(){
+    const el = document.getElementById('cu-top-customers');
+    if(!el) return;
+    const ranked = state.customers
+      .filter(c => !c.isSelf)
+      .map(c => ({ c, stats: getCustomerStats(c.customerNumber) }))
+      .filter(x => x.stats.purchaseCount >= 2)
+      .sort((a,b) => b.stats.totalSpent - a.stats.totalSpent)
+      .slice(0, 5);
+
+    if(ranked.length === 0){ el.innerHTML = ''; return; }
+
+    el.innerHTML = `
+      <div class="card" style="padding:14px; margin-bottom:14px;">
+        <p class="card-title" style="font-size:13px; margin:0 0 10px;">🌟 أفضل الزبائن (زاروا مرتين فأكثر)</p>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${ranked.map((x, i) => `
+            <div class="top-cu-item" data-num="${x.c.customerNumber}" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:6px 8px; border-radius:8px; background:var(--paper-2);">
+              <span style="font-size:13px;">${i+1}. #${x.c.customerNumber} ${x.c.name ? '· ' + escapeHtml(x.c.name) : ''}</span>
+              <span style="font-size:12px; font-weight:600; color:var(--sage);">${fmt(x.stats.totalSpent)} دج · ${x.stats.purchaseCount} زيارة</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+
+    el.querySelectorAll('.top-cu-item').forEach(item => {
+      item.addEventListener('click', () => {
+        cu.search.value = item.dataset.num;
+        renderCustomers();
+        cu.list.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  }
+
   function renderCustomers(){
     renderCustomerDatalist();
     renderCustomerAreaDatalist();
+    renderTopCustomers();
+
     const search = cu.search.value.trim().toLowerCase();
+    const repeatOnly = document.getElementById('cu-repeat-only').checked;
     const filtered = state.customers.filter(c => {
-      if(!search) return true;
-      return (c.name||'').toLowerCase().includes(search) ||
-             String(c.customerNumber).includes(search) ||
-             (c.description||'').toLowerCase().includes(search);
+      if(search){
+        const matches = (c.name||'').toLowerCase().includes(search) ||
+               String(c.customerNumber).includes(search) ||
+               (c.description||'').toLowerCase().includes(search);
+        if(!matches) return false;
+      }
+      if(repeatOnly && getCustomerStats(c.customerNumber).purchaseCount < 2) return false;
+      return true;
     });
 
     cu.list.innerHTML = '';
@@ -3101,7 +3156,16 @@
     cu.empty.textContent = state.customers.length === 0 ? 'لا يوجد زبائن مسجلون بعد.' : (filtered.length === 0 ? 'لا توجد نتائج مطابقة.' : '');
     if(state.customers.length > 0 && filtered.length === 0) cu.empty.classList.remove('hide');
 
-    filtered.slice().sort((a,b) => b.customerNumber - a.customerNumber).forEach(c => {
+    let sortedFiltered = filtered.slice();
+    if(cuSortMode === 'spent'){
+      sortedFiltered.sort((a,b) => getCustomerStats(b.customerNumber).totalSpent - getCustomerStats(a.customerNumber).totalSpent);
+    } else if(cuSortMode === 'debt'){
+      sortedFiltered.sort((a,b) => b.debt - a.debt);
+    } else {
+      sortedFiltered.sort((a,b) => b.customerNumber - a.customerNumber);
+    }
+
+    sortedFiltered.forEach((c, idx) => {
       const card = document.createElement('div');
       card.className = 'customer-card';
       const hist = (c.history || []).slice().reverse();
@@ -3109,11 +3173,12 @@
       const flexyEvents = getCustomerFlexyHistory(c.customerNumber);
       const tags = c.tags || [];
       const tagBadges = tags.map(t => `<span class="cat-tag" style="${t==='watch' ? 'background:rgba(156,59,52,0.12); color:var(--rose);' : ''}">${escapeHtml(CUSTOMER_TAG_LABELS[t] || t)}</span>`).join(' ');
+      const rankBadge = (cuSortMode === 'spent' && stats.totalSpent > 0) ? `<span style="font-size:11px; font-weight:700; color:var(--sage);">🏆 #${idx+1} بالإنفاق</span>` : '';
 
       card.innerHTML = `
         <div class="customer-head">
           <div>
-            <div class="customer-name">#${c.customerNumber} ${c.name ? '· ' + escapeHtml(c.name) : ''} ${c.isSelf ? '<span style="font-size:11px; font-weight:600; color:var(--ink-accent-dim);">🧍 سحب شخصي</span>' : ''}</div>
+            <div class="customer-name">#${c.customerNumber} ${c.name ? '· ' + escapeHtml(c.name) : ''} ${c.isSelf ? '<span style="font-size:11px; font-weight:600; color:var(--ink-accent-dim);">🧍 سحب شخصي</span>' : ''} ${rankBadge}</div>
             ${c.description ? `<div class="customer-phone" style="direction:rtl; text-align:right; font-family:'Cairo',sans-serif;">${escapeHtml(c.description)}</div>` : ''}
             ${c.phone ? `<div class="customer-phone">${escapeHtml(c.phone)}</div>` : ''}
             ${c.area ? `<div class="customer-phone" style="direction:rtl; text-align:right; font-family:'Cairo',sans-serif;">📍 ${escapeHtml(c.area)}</div>` : ''}
@@ -3122,6 +3187,7 @@
           </div>
           <div style="text-align:left;">
             <div class="debt-pill ${c.debt > 0 ? 'owe' : 'clear'}">${fmt(c.debt)} دج</div>
+            ${stats.totalSpent > 0 ? `<div style="font-size:10.5px; color:var(--ink-soft); margin-top:3px;">إنفاق: ${fmt(stats.totalSpent)} دج</div>` : ''}
             <div style="display:flex; gap:6px; margin-top:2px;">
               <button class="ev-del" data-action="edit-customer" data-id="${c.id}" aria-label="تعديل" title="تعديل بيانات الزبون">✎</button>
               <button class="ev-del" data-action="del-customer" data-id="${c.id}" aria-label="حذف">×</button>
@@ -3238,6 +3304,14 @@
   });
 
   cu.search.addEventListener('input', renderCustomers);
+  document.getElementById('cu-repeat-only').addEventListener('change', renderCustomers);
+
+  document.getElementById('cu-sort-bar').addEventListener('click', (e) => {
+    const btn = e.target.closest('.period-btn'); if(!btn) return;
+    cuSortMode = btn.dataset.sort;
+    document.getElementById('cu-sort-bar').querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b === btn));
+    renderCustomers();
+  });
 
   cu.list.addEventListener('click', async (e) => {
     const toggle = e.target.closest('[data-action="toggle-hist"]');
