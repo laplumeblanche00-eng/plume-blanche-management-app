@@ -158,6 +158,13 @@
   }
   .summary-cell.warn .num{ color:var(--rose); }
   .summary-cell.good .num{ color:var(--sage); }
+  .cmp-badge{
+    display:inline-block; font-size:10.5px; font-weight:600; padding:2px 7px;
+    border-radius:10px; margin:1px 2px;
+  }
+  .cmp-badge.good{ background:rgba(84,114,79,0.12); color:var(--sage); }
+  .cmp-badge.ok{ background:rgba(0,0,0,0.05); color:var(--ink-soft); }
+  .cmp-badge.bad{ background:rgba(156,59,52,0.12); color:var(--rose); }
   .summary-cell .lbl{
     font-size:10.5px;
     color:var(--ink-soft);
@@ -787,6 +794,7 @@
   <div class="tabbar" id="tabbar">
     <div class="tab active" data-tab="stock" data-i18n="tab_stock">المخزون</div>
     <div class="tab" data-tab="sales" data-i18n="tab_sales">المبيعات</div>
+    <div class="tab" data-tab="audience">👥 جمهور المحل</div>
     <div class="tab" data-tab="flexy" data-i18n="tab_flexy">الفليكسي</div>
     <div class="tab" data-tab="customers" data-i18n="tab_customers">الزبائن والديون</div>
     <div class="tab" data-tab="orders" data-i18n="tab_orders">طلبات الزبائن</div>
@@ -963,31 +971,6 @@
       </div>
 
       <div class="card">
-        <p class="card-title"><span class="quill">👥</span> جمهور المحل</p>
-        <p style="font-size:11px; color:var(--ink-soft); margin:-8px 0 12px;">إحصائيات مبنية على البيانات الاختيارية التي تسجلها مع البيع، الطلبات، والزبائن.</p>
-        <div class="period-bar" id="sl-audience-period-bar">
-          <div class="period-btn" data-period="day">اليوم</div>
-          <div class="period-btn" data-period="week">الأسبوع</div>
-          <div class="period-btn active" data-period="month">الشهر</div>
-          <div class="period-btn" data-period="year">السنة</div>
-          <div class="period-btn" data-period="all">الكل</div>
-        </div>
-        <div style="display:flex; align-items:center; justify-content:center; gap:14px; margin:-4px 0 12px;">
-          <button type="button" class="mini-btn" id="sl-audience-period-prev" style="padding:4px 10px;">◀ السابقة</button>
-          <span id="sl-audience-period-label" style="font-size:12px; color:var(--ink-soft); min-width:90px; text-align:center;"></span>
-          <button type="button" class="mini-btn" id="sl-audience-period-next" style="padding:4px 10px;">التالية ▶</button>
-        </div>
-        <div id="sl-audience-gender" class="breakdown-row"></div>
-        <div id="sl-audience-age" class="breakdown-row" style="margin-top:14px;"></div>
-        <div id="sl-audience-type" class="breakdown-row" style="margin-top:14px;"></div>
-        <div id="sl-audience-area" class="breakdown-row" style="margin-top:14px;"></div>
-        <p class="card-title" style="font-size:13px; margin:16px 0 6px;">🕐 التوافد حسب ساعة اليوم</p>
-        <div class="trend-chart" id="sl-audience-hours" style="height:56px;"></div>
-        <div id="sl-audience-hours-peak" style="font-size:12px; text-align:center; color:var(--ink-accent-dim); font-weight:600; margin-top:8px;"></div>
-        <div class="trend-empty" id="sl-audience-empty">لم تُسجَّل بيانات كافية بعد — استعمل أزرار الجنس/العمر/نوع الزبون عند البيع.</div>
-      </div>
-
-      <div class="card">
         <p class="card-title"><span class="quill">✒</span> <span data-i18n="sl_add_title">إضافة صنف للسلة</span></p>
         <div class="form-grid">
           <button type="button" class="mini-btn full" id="sl-scan-btn" style="margin-bottom:4px; width:100%;" data-i18n="sl_scan_btn">📷 مسح باركود لاختيار الصنف</button>
@@ -1096,6 +1079,34 @@
       <p class="card-title" style="padding:0 2px;"><span class="quill">📖</span> <span data-i18n="sl_recent_title">آخر العمليات</span></p>
       <div class="ledger" id="sl-ledger"></div>
       <div class="empty-state" id="sl-empty" data-i18n="sl_empty">لا توجد مبيعات مسجلة بعد.</div>
+    </div>
+
+    <!-- ============ تبويب: جمهور المحل ============ -->
+    <div class="tab-panel" id="panel-audience">
+      <div class="card">
+        <p class="card-title"><span class="quill">👥</span> جمهور المحل</p>
+        <p style="font-size:11px; color:var(--ink-soft); margin:-8px 0 12px;">إحصائيات مبنية على البيانات الاختيارية التي تسجلها مع البيع، الطلبات، والزبائن.</p>
+        <div class="period-bar" id="sl-audience-period-bar">
+          <div class="period-btn" data-period="day">اليوم</div>
+          <div class="period-btn" data-period="week">الأسبوع</div>
+          <div class="period-btn active" data-period="month">الشهر</div>
+          <div class="period-btn" data-period="year">السنة</div>
+          <div class="period-btn" data-period="all">الكل</div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:center; gap:14px; margin:-4px 0 12px;">
+          <button type="button" class="mini-btn" id="sl-audience-period-prev" style="padding:4px 10px;">◀ السابقة</button>
+          <span id="sl-audience-period-label" style="font-size:12px; color:var(--ink-soft); min-width:90px; text-align:center;"></span>
+          <button type="button" class="mini-btn" id="sl-audience-period-next" style="padding:4px 10px;">التالية ▶</button>
+        </div>
+        <div id="sl-audience-gender" class="breakdown-row"></div>
+        <div id="sl-audience-age" class="breakdown-row" style="margin-top:14px;"></div>
+        <div id="sl-audience-type" class="breakdown-row" style="margin-top:14px;"></div>
+        <div id="sl-audience-area" class="breakdown-row" style="margin-top:14px;"></div>
+        <p class="card-title" style="font-size:13px; margin:16px 0 6px;">🕐 التوافد حسب ساعة اليوم</p>
+        <div class="trend-chart" id="sl-audience-hours" style="height:56px;"></div>
+        <div id="sl-audience-hours-peak" style="font-size:12px; text-align:center; color:var(--ink-accent-dim); font-weight:600; margin-top:8px;"></div>
+        <div class="trend-empty" id="sl-audience-empty">لم تُسجَّل بيانات كافية بعد — استعمل أزرار الجنس/العمر/نوع الزبون عند البيع.</div>
+      </div>
     </div>
 
     <!-- ============ تبويب: الفليكسي ============ -->
@@ -1306,6 +1317,7 @@
         <div class="summary-cell good">
           <div class="num" id="fi-income">0</div>
           <div class="lbl">💵 إجمالي المداخيل (دج)</div>
+          <div id="fi-income-cmp" style="margin-top:4px;"></div>
         </div>
         <div class="summary-cell warn">
           <div class="num" id="fi-expenses">0</div>
@@ -1314,6 +1326,7 @@
         <div class="summary-cell">
           <div class="num" id="fi-net">0</div>
           <div class="lbl">📈 صافي الربح (دج)</div>
+          <div id="fi-net-cmp" style="margin-top:4px;"></div>
         </div>
         <div class="summary-cell">
           <div class="num" id="fi-margin">0٪</div>
@@ -1506,11 +1519,11 @@
   const SHOP_OPENING_DATE = '2025-09-11';
 
   const DEFAULT_FLEXY_OPERATORS = [
-    { id:'mobilis', name:'Mobilis' },
-    { id:'ooredoo', name:'Ooredoo' },
-    { id:'djezzy', name:'Djezzy' },
-    { id:'idoom', name:'Idoom 4G' },
-    { id:'adsl', name:'ADSL' },
+    { id:'mobilis', name:'Mobilis', marginRate: 1 },
+    { id:'ooredoo', name:'Ooredoo', marginRate: 0.5 },
+    { id:'djezzy', name:'Djezzy', marginRate: 0.5 },
+    { id:'idoom', name:'Idoom 4G', marginRate: null },
+    { id:'adsl', name:'ADSL', marginRate: null },
   ];
 
   /* =========================================================
@@ -2126,13 +2139,19 @@
     DEFAULT_FLEXY_OPERATORS.forEach(def => {
       if(!state.flexy.some(f => f.id === def.id)){
         state.flexy.push({
-          id: def.id, name: def.name, balance: 0, threshold: 1500,
+          id: def.id, name: def.name, balance: 0, threshold: 1500, marginRate: def.marginRate,
           totalFace: 0, totalCost: 0, totalSold: 0, history: []
         });
       }
     });
-    // ترقيع للبطاقات القديمة التي لا تملك totalSold بعد
-    state.flexy.forEach(f => { if(f.totalSold === undefined) f.totalSold = 0; });
+    // ترقيع للبطاقات القديمة التي لا تملك totalSold أو marginRate بعد (أُنشئت قبل هذي الميزة)
+    state.flexy.forEach(f => {
+      if(f.totalSold === undefined) f.totalSold = 0;
+      if(f.marginRate === undefined){
+        const def = DEFAULT_FLEXY_OPERATORS.find(d => d.id === f.id);
+        f.marginRate = def ? def.marginRate : null;
+      }
+    });
   }
 
   let flexySearch = {};
@@ -2159,7 +2178,9 @@
     flexyList.innerHTML = '';
     state.flexy.forEach(f => {
       const low = f.balance <= f.threshold;
-      const margin = f.totalFace > 0 ? ((f.totalFace - f.totalCost) / f.totalFace * 100) : 0;
+      // هامش الربح ثابت يحدده صاحب المحل يدويًا (مو مُشتق من كل عملية تعبئة على حدة)،
+      // عشان ما يتغير أو يتذبذب مع اختلاف أسعار الشراء لحظة بلحظة أثناء الاستعمال.
+      const margin = (f.marginRate !== undefined && f.marginRate !== null) ? f.marginRate : (f.totalFace > 0 ? ((f.totalFace - f.totalCost) / f.totalFace * 100) : 0);
       const totalCommissionAllTime = (f.history || []).filter(h => h.type === 'sale').reduce((s,h) => s + (h.commission || 0), 0);
       const profitRealized = (f.totalSold || 0) * (margin / 100) + totalCommissionAllTime;
       const card = document.createElement('div');
@@ -2220,10 +2241,13 @@
           </div>`;
       } else if(flexyOpenId === f.id && flexyOpenMode === 'threshold'){
         formHtml = `
-          <div class="flexy-form show">
+          <div class="flexy-form show" style="flex-direction:column; align-items:stretch;">
             <input type="number" min="0" step="1" class="fx-threshold thr-input" value="${f.threshold}" placeholder="حد التنبيه">
-            <button class="mini-btn sage" data-action="save-threshold" data-id="${f.id}">✓ حفظ</button>
-            <button class="mini-btn" data-action="close" data-id="${f.id}">إلغاء</button>
+            <input type="number" min="0" step="0.1" class="fx-margin" value="${f.marginRate !== null && f.marginRate !== undefined ? f.marginRate : ''}" placeholder="هامش الربح الثابت % (مثلاً 1 أو 0.5)">
+            <div style="display:flex; gap:8px;">
+              <button class="mini-btn sage" data-action="save-threshold" data-id="${f.id}" style="flex:1;">✓ حفظ</button>
+              <button class="mini-btn" data-action="close" data-id="${f.id}">إلغاء</button>
+            </div>
           </div>`;
       }
 
@@ -2253,7 +2277,7 @@
         <div class="flexy-head">
           <div>
             <div class="flexy-name">${escapeHtml(f.name)}</div>
-            ${f.totalFace > 0 ? `<div class="flexy-margin">هامش الربح: ${fmt(margin)}٪</div>` : ''}
+            ${f.marginRate !== null && f.marginRate !== undefined ? `<div class="flexy-margin">هامش الربح: ${fmt(margin)}٪ <span data-action="open-threshold" data-id="${f.id}" style="cursor:pointer; text-decoration:underline; color:var(--ink-accent-dim);">✎</span></div>` : `<div class="flexy-margin" style="color:var(--rose);">⚠️ هامش الربح غير محدد بعد <span data-action="open-threshold" data-id="${f.id}" style="cursor:pointer; text-decoration:underline;">✎ حدده الآن</span></div>`}
             ${lastOp ? `<div class="flexy-margin">آخر عملية: ${new Date(lastOp.date).toLocaleString('ar-DZ')} (${lastOp.type === 'refill' ? 'تعبئة' : 'بيع'})</div>` : ''}
           </div>
           <div>
@@ -2427,6 +2451,11 @@
     } else if(action === 'save-threshold'){
       const thr = Number(card.querySelector('.fx-threshold').value);
       state.flexy[idx].threshold = isNaN(thr) ? state.flexy[idx].threshold : thr;
+      const marginInput = card.querySelector('.fx-margin');
+      if(marginInput){
+        const marginVal = marginInput.value.trim();
+        state.flexy[idx].marginRate = marginVal === '' ? null : Number(marginVal);
+      }
     } else {
       return;
     }
@@ -3922,18 +3951,24 @@
   }
 
   function computeFlexyProfitInPeriod(start, end){
-    let totalSold = 0, totalFace = 0, totalCost = 0, totalCommission = 0;
+    let totalProfit = 0;
     (state.flexy || []).forEach(op => {
+      let soldInPeriod = 0, commissionInPeriod = 0, faceInPeriod = 0, costInPeriod = 0;
       (op.history || []).forEach(h => {
         const d = new Date(h.date);
         if(start && d < start) return;
         if(end && d >= end) return;
-        if(h.type === 'sale'){ totalSold += h.amount; totalCommission += (h.commission || 0); }
-        else if(h.type === 'refill'){ totalFace += h.amount; totalCost += (h.cost || 0); }
+        if(h.type === 'sale'){ soldInPeriod += h.amount; commissionInPeriod += (h.commission || 0); }
+        else if(h.type === 'refill'){ faceInPeriod += h.amount; costInPeriod += (h.cost || 0); }
       });
+      // كل متعامل له هامش ربح ثابت خاص به (Mobilis/Ooredoo/Djezzy بنسب مختلفة) — نحسب ربح
+      // كل واحد بهامشه الخاص بدل دمج الكل بهامش واحد مغلوط.
+      const marginPct = (op.marginRate !== null && op.marginRate !== undefined)
+        ? op.marginRate
+        : (faceInPeriod > 0 ? ((faceInPeriod - costInPeriod) / faceInPeriod * 100) : 0);
+      totalProfit += soldInPeriod * (marginPct / 100) + commissionInPeriod;
     });
-    const marginRate = totalFace > 0 ? (totalFace - totalCost) / totalFace : 0;
-    return totalSold * marginRate + totalCommission;
+    return totalProfit;
   }
 
   async function checkAndRenderInvestmentMilestone(){
@@ -3974,6 +4009,45 @@
     }
   }
 
+  // إجماليات مالية عامة لأي نطاق زمني — تُستخدم لمقارنة الفترة الحالية بفترات سابقة
+  function computeFinanceTotals(start, end){
+    const inRange = (dateStr) => {
+      if(!start) return true;
+      const d = new Date(dateStr);
+      return d >= start && (!end || d < end);
+    };
+    const sales = state.sales.filter(s => inRange(s.date));
+    const productIncome = sales.filter(s => s.category !== 'خدمات').reduce((s,x) => s + x.total, 0);
+    const serviceIncome = sales.filter(s => s.category === 'خدمات').reduce((s,x) => s + x.total, 0);
+    const flexyProfit = computeFlexyProfitInPeriod(start, end);
+    const otherIncomeTotal = (state.otherIncome || []).filter(i => inRange(i.date)).reduce((s,x) => s + x.amount, 0);
+    const totalIncome = productIncome + serviceIncome + flexyProfit + otherIncomeTotal;
+    const totalExpenses = (state.expenses || []).filter(e => inRange(e.date)).reduce((s,x) => s + x.amount, 0);
+    return { totalIncome, totalExpenses, netProfit: totalIncome - totalExpenses };
+  }
+
+  function shiftRange(range, days){
+    if(!range.start) return range;
+    const s = new Date(range.start); s.setDate(s.getDate() - days);
+    const e = new Date(range.end); e.setDate(e.getDate() - days);
+    return { start: s, end: e };
+  }
+
+  // شارة تقارن رقمين وتلوّنها بنظام إشارة المرور: أخضر نمو ≥5%، أصفر شبه مستقر، أحمر تراجع ≥5%
+  function pctChangeBadge(current, previous, label){
+    if(previous === 0){
+      if(current === 0) return '';
+      return `<span class="cmp-badge good">🟢 جديد ${label}</span>`;
+    }
+    const pct = ((current - previous) / Math.abs(previous)) * 100;
+    const rounded = Math.round(pct);
+    let cls = 'ok', dot = '🟡';
+    if(pct >= 5){ cls = 'good'; dot = '🟢'; }
+    else if(pct <= -5){ cls = 'bad'; dot = '🔴'; }
+    const sign = pct >= 0 ? '+' : '';
+    return `<span class="cmp-badge ${cls}">${dot} ${sign}${rounded}٪ ${label}</span>`;
+  }
+
   function renderFinance(){
     checkAndRenderInvestmentMilestone();
     const start = financePeriodStart(financePeriod);
@@ -4008,6 +4082,30 @@
     fi.margin.textContent = fmt(margin) + '٪';
     fi.daily.textContent = fmt(dailyAvg);
     fi.monthly.textContent = fmt(monthlyAvg);
+
+    // مؤشرات المقارنة: مقابل الفترة السابقة مباشرة، ومقابل نفس الفترة من السنة الماضية
+    // (تُخفى لو الفترة "الكل" لأنها ما تقابلها فترة سابقة، أو لو ما فيه بيانات كافية للمقارنة)
+    const incomeCmpEl = document.getElementById('fi-income-cmp');
+    const netCmpEl = document.getElementById('fi-net-cmp');
+    if(incomeCmpEl && netCmpEl){
+      if(financePeriod === 'all' || !start){
+        incomeCmpEl.innerHTML = '';
+        netCmpEl.innerHTML = '';
+      } else {
+        const prevRange = periodRange(financePeriod, financePeriodOffset + 1);
+        const prevTotals = computeFinanceTotals(prevRange.start, prevRange.end);
+        const yearAgoRange = shiftRange({ start, end }, 365);
+        const yearAgoTotals = computeFinanceTotals(yearAgoRange.start, yearAgoRange.end);
+
+        let incomeHtml = pctChangeBadge(totalIncome, prevTotals.totalIncome, 'عن السابقة');
+        if(yearAgoTotals.totalIncome > 0) incomeHtml += pctChangeBadge(totalIncome, yearAgoTotals.totalIncome, 'عن نفس الفترة قبل سنة');
+        incomeCmpEl.innerHTML = incomeHtml;
+
+        let netHtml = pctChangeBadge(netProfit, prevTotals.netProfit, 'عن السابقة');
+        if(yearAgoTotals.totalIncome > 0 || yearAgoTotals.totalExpenses > 0) netHtml += pctChangeBadge(netProfit, yearAgoTotals.netProfit, 'عن نفس الفترة قبل سنة');
+        netCmpEl.innerHTML = netHtml;
+      }
+    }
 
     // بطاقة الأداء
     fi.perfBanner.classList.remove('good','ok','bad');
@@ -4100,8 +4198,10 @@
         if(h.type !== 'sale') return;
         const b = buckets.find(x => x.key === monthKey(h.date));
         if(!b) return;
-        // نسبة ربح تقريبية إجمالية للمتعامل تُطبَّق على البيع بنفس الشهر + العمولات الإضافية كربح صافٍ
-        const marginRate = op.totalFace > 0 ? ((op.totalFace - op.totalCost) / op.totalFace) : 0;
+        // هامش ربح ثابت لكل متعامل (Mobilis/Ooredoo/Djezzy بنسب مختلفة) + العمولات الإضافية كربح صافٍ
+        const marginRate = (op.marginRate !== null && op.marginRate !== undefined)
+          ? op.marginRate / 100
+          : (op.totalFace > 0 ? ((op.totalFace - op.totalCost) / op.totalFace) : 0);
         b.value += h.amount * marginRate + (h.commission || 0);
       });
     });
