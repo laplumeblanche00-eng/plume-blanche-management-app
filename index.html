@@ -860,6 +860,7 @@
     <div class="tab" data-tab="finance">📊 الأداء المالي</div>
     <div class="tab" data-tab="operations">🧑‍💼 التشغيل</div>
     <div class="tab" data-tab="lessons">📘 الدروس المستفادة</div>
+    <div class="tab" data-tab="suppliers">🚚 الموردين</div>
   </div>
 
   <div class="page">
@@ -1539,6 +1540,65 @@
       <div class="empty-state" id="ls-empty">لا يوجد أي درس مسجّل بعد.</div>
     </div>
 
+    <!-- ============ تبويب: الموردين ============ -->
+    <div class="tab-panel" id="panel-suppliers">
+      <div class="summary">
+        <div class="summary-cell">
+          <div class="num" id="sp-count">0</div>
+          <div class="lbl">مورّد</div>
+        </div>
+        <div class="summary-cell warn">
+          <div class="num" id="sp-debt">0</div>
+          <div class="lbl">إجمالي ما أدين به لهم (دج)</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title"><span class="quill">✒</span> إضافة مورّد جديد</p>
+        <div class="form-grid">
+          <div>
+            <label for="sp-name">اسم المورّد</label>
+            <input type="text" id="sp-name" placeholder="مثلاً: إراحة، مورّد القرطاسية...">
+          </div>
+          <div>
+            <label for="sp-phone">رقم الهاتف (اختياري)</label>
+            <input type="text" id="sp-phone" placeholder="0555...">
+          </div>
+          <div class="full">
+            <label for="sp-supplies">وش يورّد (اختياري)</label>
+            <input type="text" id="sp-supplies" placeholder="مثلاً: قرطاسية، مشروبات، رصيد فليكسي...">
+          </div>
+          <div class="full">
+            <label>نوع المصدر</label>
+            <div class="demo-group" data-group="sp-source-type">
+              <button type="button" class="demo-btn selected" data-value="delivers">🚚 مورّد يوصّل البضاعة</button>
+              <button type="button" class="demo-btn" data-value="wholesale">🏬 محل جملة أروح له</button>
+            </div>
+          </div>
+          <div class="full">
+            <label for="sp-debt-init">دين ابتدائي عليّ له (دج، اتركه 0 إذا لا يوجد)</label>
+            <input type="number" id="sp-debt-init" min="0" placeholder="0">
+          </div>
+          <div class="full">
+            <label for="sp-notes">ملاحظات إضافية (اختياري)</label>
+            <textarea id="sp-notes" placeholder="مثلاً: يوصّل كل يوم أحد، أسعاره أرخص لكن التوصيل بطيء..."></textarea>
+          </div>
+          <button class="add-btn full" id="sp-add">+ إضافة مورّد</button>
+        </div>
+      </div>
+
+      <input type="text" id="sp-search" placeholder="ابحث عن مورّد..." style="margin-bottom:10px;">
+
+      <div class="period-bar" id="sp-sort-bar" style="margin-bottom:14px;">
+        <div class="period-btn active" data-sort="recent">الأحدث</div>
+        <div class="period-btn" data-sort="debt">الأكثر دينًا</div>
+      </div>
+
+      <div id="sp-list"></div>
+      <datalist id="sp-buyer-datalist"></datalist>
+      <div class="empty-state" id="sp-empty">لا يوجد موردون مسجلون بعد.</div>
+    </div>
+
   </div>
 
   <p class="footnote" data-i18n="footnote">
@@ -1574,10 +1634,11 @@
     customerCounter: 'plume-blanche-customer-counter',
     milestones: 'plume-blanche-milestones',
     lessons: 'plume-blanche-lessons',
+    suppliers: 'plume-blanche-suppliers',
   };
 
   let storageAvailable = true;
-  let state = { stock: [], sales: [], customers: [], orders: [], flexy: [], expenses: [], otherIncome: [], founderTeam: [], customerCounter: 0, milestones: {}, lessons: [] };
+  let state = { stock: [], sales: [], customers: [], orders: [], flexy: [], expenses: [], otherIncome: [], founderTeam: [], customerCounter: 0, milestones: {}, lessons: [], suppliers: [] };
   const SHOP_OPENING_DATE = '2025-09-11';
 
   const DEFAULT_FLEXY_OPERATORS = [
@@ -3654,6 +3715,7 @@
       founderTeam: state.founderTeam,
       milestones: state.milestones,
       lessons: state.lessons,
+      suppliers: state.suppliers,
       customerCounter: state.customerCounter,
     };
   }
@@ -3688,6 +3750,25 @@
     return result;
   }
 
+  function mergeSuppliers(currentList, importedList){
+    const result = (currentList || []).map(s => ({ ...s }));
+    (importedList || []).forEach(impS => {
+      const idx = result.findIndex(s => s.id === impS.id);
+      if(idx === -1){ result.push(impS); return; }
+      const curr = result[idx];
+      const mergeById = (a, b) => {
+        const map = new Map();
+        (a || []).forEach(x => map.set(x.id || (x.date+x.type+x.amount), x));
+        (b || []).forEach(x => { const k = x.id || (x.date+x.type+x.amount); if(!map.has(k)) map.set(k, x); });
+        return Array.from(map.values());
+      };
+      const mergedHistory = mergeById(curr.history, impS.history);
+      const mergedOrders = mergeById(curr.orders, impS.orders);
+      result[idx] = { ...curr, history: mergedHistory, orders: mergedOrders, debt: Math.max(curr.debt||0, impS.debt||0) };
+    });
+    return result;
+  }
+
   async function applyImportedData(data){
     const wantMerge = confirm(
       'كيف تريد استيراد هذه البيانات؟\n\n' +
@@ -3705,6 +3786,7 @@
       state.otherIncome = mergeArraysById(state.otherIncome, data.otherIncome);
       state.founderTeam = mergeArraysById(state.founderTeam, data.founderTeam);
       state.lessons = mergeArraysById(state.lessons, data.lessons);
+      state.suppliers = mergeSuppliers(state.suppliers, data.suppliers);
       if(data.milestones && typeof data.milestones === 'object'){
         // لا نستبدل تاريخ إنجاز موجود عندنا فعلاً — فقط نأخذ من المستورد ما ينقصنا
         state.milestones = { ...data.milestones, ...state.milestones };
@@ -3726,6 +3808,7 @@
       state.otherIncome = Array.isArray(data.otherIncome) ? data.otherIncome : [];
       state.founderTeam = Array.isArray(data.founderTeam) ? data.founderTeam : [];
       state.lessons = Array.isArray(data.lessons) ? data.lessons : [];
+      state.suppliers = Array.isArray(data.suppliers) ? data.suppliers : [];
       state.milestones = (data.milestones && typeof data.milestones === 'object' && !Array.isArray(data.milestones)) ? data.milestones : {};
       state.customerCounter = typeof data.customerCounter === 'number' ? data.customerCounter : 0;
       ensureFlexyDefaults();
@@ -3740,6 +3823,7 @@
     await saveKey(KEYS.otherIncome, state.otherIncome);
     await saveKey(KEYS.founderTeam, state.founderTeam);
     await saveKey(KEYS.lessons, state.lessons);
+    await saveKey(KEYS.suppliers, state.suppliers);
     await saveKey(KEYS.milestones, state.milestones);
     await saveKey(KEYS.customerCounter, state.customerCounter);
 
@@ -3869,7 +3953,7 @@
 
   ['sl-demo-gender','sl-demo-age','sl-demo-type','sl-pay-mode',
    'or-demo-gender','or-demo-age','or-demo-type',
-   'cu-demo-gender','cu-demo-age','cu-demo-type','cu-desc-tags'].forEach(wireDemoGroup);
+   'cu-demo-gender','cu-demo-age','cu-demo-type','cu-desc-tags','sp-source-type'].forEach(wireDemoGroup);
 
   const CUSTOMER_TAG_LABELS = { loyal: 'وفي', special: 'مميز', supportive: 'داعم', watch: '⚠️ يحتاج متابعة' };
 
@@ -4659,6 +4743,224 @@
     renderLessons();
   });
 
+  /* =========================================================
+     الموردين: بيانات تواصل + ديون عليّ (عكس ديون الزبائن) + سجل طلبات
+  ========================================================= */
+  const sp = {
+    name: document.getElementById('sp-name'),
+    phone: document.getElementById('sp-phone'),
+    supplies: document.getElementById('sp-supplies'),
+    debtInit: document.getElementById('sp-debt-init'),
+    notes: document.getElementById('sp-notes'),
+    add: document.getElementById('sp-add'),
+    search: document.getElementById('sp-search'),
+    list: document.getElementById('sp-list'),
+    empty: document.getElementById('sp-empty'),
+    count: document.getElementById('sp-count'),
+    debtTotal: document.getElementById('sp-debt'),
+  };
+  let spEditId = null;
+  let spOrderOpenId = null;
+  let spSortMode = 'recent';
+
+  function renderBuyerDatalist(){
+    const dl = document.getElementById('sp-buyer-datalist');
+    if(!dl) return;
+    const names = new Set();
+    state.suppliers.forEach(s => {
+      (s.history || []).forEach(h => { if(h.buyer) names.add(h.buyer.trim()); });
+      (s.orders || []).forEach(o => { if(o.buyer) names.add(o.buyer.trim()); });
+    });
+    dl.innerHTML = Array.from(names).sort().map(n => `<option value="${escapeHtml(n)}"></option>`).join('');
+  }
+
+  function renderSuppliers(){
+    renderBuyerDatalist();
+    sp.count.textContent = state.suppliers.length;
+    sp.debtTotal.textContent = fmt(state.suppliers.reduce((s,x) => s + x.debt, 0));
+
+    const search = sp.search.value.trim().toLowerCase();
+    const filtered = state.suppliers.filter(s => !search ||
+      (s.name||'').toLowerCase().includes(search) ||
+      (s.supplies||'').toLowerCase().includes(search));
+
+    sp.list.innerHTML = '';
+    sp.empty.classList.toggle('hide', state.suppliers.length > 0);
+    sp.empty.textContent = state.suppliers.length === 0 ? 'لا يوجد موردون مسجلون بعد.' : (filtered.length === 0 ? 'لا توجد نتائج مطابقة.' : '');
+    if(state.suppliers.length > 0 && filtered.length === 0) sp.empty.classList.remove('hide');
+
+    const sorted = filtered.slice().sort((a,b) => spSortMode === 'debt' ? (b.debt - a.debt) : (new Date(b.createdAt||0) - new Date(a.createdAt||0)));
+
+    sorted.forEach(s => {
+      const card = document.createElement('div');
+      card.className = 'customer-card';
+      const hist = (s.history || []).slice().reverse();
+      const orders = (s.orders || []).slice().reverse();
+
+      card.innerHTML = `
+        <div class="customer-head">
+          <div>
+            <div class="customer-name">${escapeHtml(s.name || 'مورّد بلا اسم')} <span style="font-size:11px; font-weight:600; color:var(--ink-accent-dim);">${s.sourceType === 'wholesale' ? '🏬 محل جملة' : '🚚 مورّد يوصّل'}</span></div>
+            ${s.supplies ? `<div class="customer-phone">📦 ${escapeHtml(s.supplies)}</div>` : ''}
+            ${s.phone ? `<div class="customer-phone">${escapeHtml(s.phone)}</div>` : ''}
+            ${s.notes ? `<div class="customer-phone" style="white-space:pre-wrap;">📝 ${escapeHtml(s.notes)}</div>` : ''}
+          </div>
+          <div style="text-align:left;">
+            <div class="debt-pill ${s.debt > 0 ? 'owe' : 'clear'}">${fmt(s.debt)} دج</div>
+            <div style="display:flex; gap:6px; margin-top:2px;">
+              <button class="ev-del" data-action="edit-supplier" data-id="${s.id}" aria-label="تعديل" title="تعديل بيانات المورّد">✎</button>
+              <button class="ev-del" data-action="del-supplier" data-id="${s.id}" aria-label="حذف">×</button>
+            </div>
+          </div>
+        </div>
+
+        ${spEditId === s.id ? `
+        <div class="flexy-form show" style="flex-direction:column; align-items:stretch; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);">
+          <input type="text" class="sp-edit-name" placeholder="اسم المورّد" value="${escapeHtml(s.name || '')}">
+          <input type="text" class="sp-edit-phone" placeholder="رقم الهاتف" value="${escapeHtml(s.phone || '')}">
+          <input type="text" class="sp-edit-supplies" placeholder="وش يورّد" value="${escapeHtml(s.supplies || '')}">
+          <div class="demo-group sp-edit-source-type">
+            <button type="button" class="demo-btn ${s.sourceType !== 'wholesale' ? 'selected' : ''}" data-value="delivers">🚚 مورّد يوصّل البضاعة</button>
+            <button type="button" class="demo-btn ${s.sourceType === 'wholesale' ? 'selected' : ''}" data-value="wholesale">🏬 محل جملة أروح له</button>
+          </div>
+          <textarea class="sp-edit-notes" placeholder="ملاحظات" style="width:100%;">${escapeHtml(s.notes || '')}</textarea>
+          <div style="display:flex; gap:8px;">
+            <button class="mini-btn sage" data-action="save-edit-supplier" data-id="${s.id}" style="flex:1;">✓ حفظ التعديلات</button>
+            <button class="mini-btn" data-action="cancel-edit-supplier" data-id="${s.id}">إلغاء</button>
+          </div>
+        </div>` : ''}
+
+        <div class="customer-actions" style="margin-top:10px; flex-wrap:wrap;">
+          <input type="number" min="0" class="amt-input" placeholder="مبلغ (دج)" id="sp-amt-${s.id}">
+          <input type="text" list="sp-buyer-datalist" placeholder="مين اشترى (اختياري)" id="sp-buyer-${s.id}" style="flex:1; min-width:110px;">
+          <button class="mini-btn rose" data-action="sp-add-debt" data-id="${s.id}">+ دين جديد</button>
+          <button class="mini-btn sage" data-action="sp-pay-debt" data-id="${s.id}">− تسديد</button>
+        </div>
+
+        <div style="display:flex; gap:14px; margin-top:8px;">
+          ${hist.length ? `<span class="history-toggle" data-action="toggle-sp-hist" data-id="${s.id}">سجل الديون (${hist.length})</span>` : ''}
+          <span class="history-toggle" data-action="toggle-sp-orders" data-id="${s.id}">سجل الطلبات (${orders.length})</span>
+        </div>
+        <div class="history-list" id="sp-hist-${s.id}">
+          ${hist.map(h => `<div class="history-item"><span>${new Date(h.date).toLocaleDateString('ar-DZ')}${h.buyer ? ' · 🧍 ' + escapeHtml(h.buyer) : ''}${h.note ? ' · ' + escapeHtml(h.note) : ''}</span><span>${h.type === 'debt' ? '+' : '−'} ${fmt(h.amount)} دج</span></div>`).join('')}
+        </div>
+        <div class="history-list" id="sp-orders-${s.id}">
+          ${orders.map(o => `<div class="history-item"><span>${new Date(o.date).toLocaleDateString('ar-DZ')} — ${escapeHtml(o.item)} ${o.qty ? '× ' + o.qty : ''}${o.buyer ? ' · 🧍 ' + escapeHtml(o.buyer) : ''}${o.note ? ' · ' + escapeHtml(o.note) : ''}</span><span>${o.status === 'done' ? '✓ تم' : '⏳ قيد الانتظار'}</span></div>`).join('')}
+          ${spOrderOpenId === s.id ? `
+            <div class="flexy-form show" style="flex-direction:column; align-items:stretch; margin-top:8px;">
+              <input type="text" class="sp-new-order-item" placeholder="الصنف المطلوب">
+              <input type="number" min="1" class="sp-new-order-qty" placeholder="الكمية">
+              <input type="text" list="sp-buyer-datalist" class="sp-new-order-buyer" placeholder="مين اشترى (اختياري)">
+              <button class="mini-btn sage" data-action="save-sp-order" data-id="${s.id}">✓ تسجيل الطلبية</button>
+            </div>` : `<button class="mini-btn" data-action="open-sp-order" data-id="${s.id}" style="margin-top:8px; width:100%;">+ تسجيل طلبية جديدة</button>`}
+        </div>
+      `;
+      sp.list.appendChild(card);
+    });
+  }
+
+  sp.add.addEventListener('click', async () => {
+    const name = sp.name.value.trim();
+    if(!name) return;
+    const initDebt = Number(sp.debtInit.value) || 0;
+    state.suppliers.push({
+      id: uid(), name, phone: sp.phone.value.trim(), supplies: sp.supplies.value.trim(),
+      sourceType: getDemoValue('sp-source-type') || 'delivers',
+      notes: sp.notes.value.trim(), debt: initDebt, createdAt: new Date().toISOString(),
+      history: initDebt > 0 ? [{ type:'debt', amount: initDebt, date: new Date().toISOString() }] : [],
+      orders: []
+    });
+    await saveKey(KEYS.suppliers, state.suppliers);
+    sp.name.value=''; sp.phone.value=''; sp.supplies.value=''; sp.debtInit.value=''; sp.notes.value='';
+    resetDemoGroup('sp-source-type');
+    document.querySelector('[data-group="sp-source-type"] [data-value="delivers"]')?.classList.add('selected');
+    renderSuppliers();
+  });
+
+  sp.search.addEventListener('input', renderSuppliers);
+  document.getElementById('sp-sort-bar').addEventListener('click', (e) => {
+    const btn = e.target.closest('.period-btn'); if(!btn) return;
+    spSortMode = btn.dataset.sort;
+    document.getElementById('sp-sort-bar').querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b === btn));
+    renderSuppliers();
+  });
+
+  sp.list.addEventListener('click', async (e) => {
+    const demoBtn = e.target.closest('.sp-edit-source-type .demo-btn');
+    if(demoBtn){
+      demoBtn.parentElement.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('selected'));
+      demoBtn.classList.add('selected');
+      return;
+    }
+    const histToggle = e.target.closest('[data-action="toggle-sp-hist"]');
+    if(histToggle){ document.getElementById('sp-hist-' + histToggle.dataset.id).classList.toggle('show'); return; }
+    const ordersToggle = e.target.closest('[data-action="toggle-sp-orders"]');
+    if(ordersToggle){ document.getElementById('sp-orders-' + ordersToggle.dataset.id).classList.toggle('show'); return; }
+
+    const btn = e.target.closest('button'); if(!btn) return;
+    const id = btn.dataset.id;
+    const idx = state.suppliers.findIndex(s => s.id === id);
+    if(idx === -1) return;
+    const action = btn.dataset.action;
+    const card = btn.closest('.customer-card');
+
+    if(action === 'edit-supplier'){ spEditId = spEditId === id ? null : id; renderSuppliers(); return; }
+    if(action === 'cancel-edit-supplier'){ spEditId = null; renderSuppliers(); return; }
+    if(action === 'save-edit-supplier'){
+      state.suppliers[idx].name = card.querySelector('.sp-edit-name').value.trim();
+      state.suppliers[idx].phone = card.querySelector('.sp-edit-phone').value.trim();
+      state.suppliers[idx].supplies = card.querySelector('.sp-edit-supplies').value.trim();
+      state.suppliers[idx].notes = card.querySelector('.sp-edit-notes').value.trim();
+      state.suppliers[idx].sourceType = card.querySelector('.sp-edit-source-type .demo-btn.selected')?.dataset.value || 'delivers';
+      spEditId = null;
+      await saveKey(KEYS.suppliers, state.suppliers);
+      renderSuppliers();
+      return;
+    }
+    if(action === 'del-supplier'){
+      if(!confirm('حذف هذا المورّد نهائيًا؟ لا يمكن التراجع.')) return;
+      state.suppliers.splice(idx,1);
+      await saveKey(KEYS.suppliers, state.suppliers);
+      renderSuppliers();
+      return;
+    }
+    if(action === 'sp-add-debt' || action === 'sp-pay-debt'){
+      const input = document.getElementById('sp-amt-' + id);
+      const buyerInput = document.getElementById('sp-buyer-' + id);
+      const buyer = buyerInput ? buyerInput.value.trim() : '';
+      const amount = Number(input.value);
+      if(!amount || amount <= 0) return;
+      if(action === 'sp-add-debt') state.suppliers[idx].debt += amount;
+      else {
+        if(amount > state.suppliers[idx].debt){
+          alert('المبلغ المدخل أكبر من الدين الحالي (' + fmt(state.suppliers[idx].debt) + ' دج).');
+          return;
+        }
+        state.suppliers[idx].debt -= amount;
+      }
+      if(!state.suppliers[idx].history) state.suppliers[idx].history = [];
+      state.suppliers[idx].history.push({ type: action === 'sp-add-debt' ? 'debt' : 'payment', amount, date: new Date().toISOString(), buyer: buyer || null });
+      input.value = '';
+      if(buyerInput) buyerInput.value = '';
+      await saveKey(KEYS.suppliers, state.suppliers);
+      renderSuppliers();
+      return;
+    }
+    if(action === 'open-sp-order'){ spOrderOpenId = id; renderSuppliers(); return; }
+    if(action === 'save-sp-order'){
+      const item = card.querySelector('.sp-new-order-item').value.trim();
+      const qty = Number(card.querySelector('.sp-new-order-qty').value) || null;
+      const buyer = card.querySelector('.sp-new-order-buyer')?.value.trim() || null;
+      if(!item) return;
+      if(!state.suppliers[idx].orders) state.suppliers[idx].orders = [];
+      state.suppliers[idx].orders.push({ id: uid(), item, qty, buyer, date: new Date().toISOString(), status: 'pending' });
+      spOrderOpenId = null;
+      await saveKey(KEYS.suppliers, state.suppliers);
+      renderSuppliers();
+      return;
+    }
+  });
+
   function renderAllPanels(){
     renderStock();
     renderSales();
@@ -4669,6 +4971,7 @@
     renderFinance();
     renderFounderTeam();
     renderLessons();
+    renderSuppliers();
   }
 
   /* =========================================================
@@ -4754,6 +5057,7 @@
     state.founderTeam = await loadKey(KEYS.founderTeam);
     { const rawMilestones = await loadKey(KEYS.milestones); state.milestones = (rawMilestones && !Array.isArray(rawMilestones)) ? rawMilestones : {}; }
     state.lessons = await loadKey(KEYS.lessons);
+    state.suppliers = await loadKey(KEYS.suppliers);
     lsDate.value = todayISO();
     { const rawCounter = await loadKey(KEYS.customerCounter); state.customerCounter = (typeof rawCounter === 'number') ? rawCounter : (state.customers.reduce((m,c) => Math.max(m, c.customerNumber||0), 0)); }
     await ensureCustomerNumbers();
@@ -4775,6 +5079,7 @@
       listenKeyLive(KEYS.founderTeam, data => { state.founderTeam = data; renderFounderTeam(); });
       listenKeyLive(KEYS.milestones, data => { state.milestones = (data && !Array.isArray(data)) ? data : {}; renderFinance(); });
       listenKeyLive(KEYS.lessons, data => { state.lessons = data; renderLessons(); });
+      listenKeyLive(KEYS.suppliers, data => { state.suppliers = data; renderSuppliers(); });
     }
   }
 
